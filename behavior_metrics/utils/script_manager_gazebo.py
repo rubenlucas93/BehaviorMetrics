@@ -38,9 +38,9 @@ def run_brains_worlds(app_configuration, controller, randomize=False):
 
     # In case any other metric is needed. The available metrics can be found in metrics_gazebo.py > get_metrics
     aggregated_metrics = {
-        "average_speed": "meters/s",
+        "average_speed": "m/s",
         "percentage_completed": "%",
-        "position_deviation_mae": "meters",
+        "position_deviation_mae": "cm",
     }
     metrics_len = len(aggregated_metrics)
 
@@ -158,6 +158,7 @@ def run_brains_worlds(app_configuration, controller, randomize=False):
                 axs[world_counter, key_counter].set_xticklabels(brains_metrics_names, fontsize=8)
                 axs[world_counter, key_counter].set_title(f"{key} in {world_name}")
                 axs[world_counter, key_counter].set_ylabel(aggregated_metrics[key])
+                axs[world_counter, key_counter].set_ylim([0, None])  # set lower limit to 0
                 key_counter += 1
             else:
                 # Create a boxplot for all metrics in the same axis
@@ -166,6 +167,7 @@ def run_brains_worlds(app_configuration, controller, randomize=False):
                 axs[key_counter].set_xticklabels(brains_metrics_names, fontsize=8)
                 axs[key_counter].set_title(f"{key} in {world_name}")
                 axs[key_counter].set_ylabel(aggregated_metrics[key])
+                axs[key_counter].set_ylim([0, None])  # set lower limit to 0
                 key_counter += 1
 
     # Display the chart

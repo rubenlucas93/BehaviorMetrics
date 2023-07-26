@@ -23,7 +23,7 @@ Behaviors:
             ImageTranform: ''
         Type: 'f1'
     Simulation:
-        World: /usr/local/gazebo/launch/simple_circuit.launch
+        World: /opt/jderobot/share/jderobot/gazebo/launch/many_curves.launch
     Dataset:
         In: '/tmp/my_bag.bag'
         Out: ''

@@ -57,7 +57,7 @@ class StepFollowLine(F1Env):
         f1_image_camera, _ = self.f1gazeboimages.get_camera_info()
 
         ##==== get center
-        points_in_red_line, _ = self.simplifiedperception.processed_image(
+        points_in_red_line, centrals_normalized = self.simplifiedperception.processed_image(
             f1_image_camera.data, self.height, self.width, self.x_row, self.center_image
         )
         if self.state_space == "spn":
@@ -69,10 +69,11 @@ class StepFollowLine(F1Env):
         # center = float(self.center_image - self.point) / (float(self.width) // 2)
 
         ##==== get State
+        state = centrals_normalized
         ##==== simplified perception as observation
-        state = self.simplifiedperception.calculate_observation(
-            points_in_red_line, self.center_image, self.pixel_region
-        )
+        # state = self.simplifiedperception.calculate_observation(
+        #     points_in_red_line, self.center_image, self.pixel_region
+        # )
 
         ##==== get Rewards
         if self.reward_function == "followline_center":

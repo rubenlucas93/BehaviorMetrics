@@ -183,7 +183,7 @@ class Brain:
         self.inference_file = params.inference["params"]["inference_file"]
         observation = self.env.reset()
         self.step = 1
-        self.state = "".join(map(str, observation))
+        self.state = observation
 
         self.inferencer = InferencerWrapper("dqn", self.inference_file, env=config_file)
 
@@ -239,7 +239,7 @@ class Brain:
         observation, reward, done, info = self.env.step(action, self.step)
         self.step += 1
 
-        self.state = "".join(map(str, observation))
+        self.state = observation
 
         image = self.camera.getImage().data
 

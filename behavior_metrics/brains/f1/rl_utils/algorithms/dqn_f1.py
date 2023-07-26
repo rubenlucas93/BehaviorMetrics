@@ -34,5 +34,5 @@ class DQNF1:
                 0
             ]
         else:
-            return self.model.predict([int(state)], verbose=0)[0]
-
+            state = np.array(state).reshape(1, int(self.state_space[2:]))
+            return self.model(state)[0]
