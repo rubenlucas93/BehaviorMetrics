@@ -1,7 +1,7 @@
 PyQt5==5.15.0
 pyQt5-sip==12.8.1
 scipy==1.10.0
-jupyterlab==2.2.10
+jupyterlab==3.6.7
 PyQt3D==5.15.0
 npyscreen==4.10.5
 pynput==1.6.8
@@ -16,7 +16,7 @@ matplotlib==3.1.2
 kiwisolver==1.2
 defusedxml==0.6.0
 netifaces==0.10.9
-Pillow==10.0.1
+Pillow==10.3.0
 pyglet==1.5.0
 gym==0.17.3
 requests==2.31.0
@@ -25,7 +25,7 @@ empy==3.3.2
 vcstool==0.2.14
 scikit-image==0.19.2
 bagpy==0.4.10
-pycryptodomex==3.9.9
+pycryptodomex==3.19.1
 torch==1.13.1
 torchvision==0.14.1
 tensorboard==2.11.0
@@ -35,7 +35,9 @@ tensorflow-gpu==2.11.0
 albumentations==1.0.3
 protobuf==3.19.5
 transforms3d==0.4.1
-pydantic==1.10.2
+pydantic==1.10.13
 seaborn==0.12.2
 pandas
 scikit-learn==1.0.2
+pygame
+keras_preprocessing
