@@ -168,8 +168,6 @@ class PilotCarla(threading.Thread):
                 self.brain_iterations_simulated_time.append(self.ros_clock_time - start_time_ros)
                 if not self.async_mode:
                     self.controller.world.tick()
-                else:
-                    self.controller.world.wait_for_tick()
 
         self.execution_completed = True
         self.kill()
