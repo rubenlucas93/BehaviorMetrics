@@ -35,7 +35,7 @@ from std_srvs.srv import Empty
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from datetime import datetime
-from std_msgs.msg import String
+from std_msgs.msg import String, Float32
 from utils import metrics_carla
 from utils.constants import CARLA_INFRACTION_PENALTIES
 try:
@@ -90,6 +90,8 @@ class ControllerCarla:
                 time.sleep(1)  # sleep for 1 second before checking again
         self.map_waypoints = self.carla_map.generate_waypoints(0.5)
         self.weather = self.world.get_weather()
+        self.pub = rospy.Publisher('/carla/ego_vehicle/steering_angle', Float32, queue_size=1)
+
         
     # GUI update
     def update_frame(self, frame_id, data):
@@ -102,6 +104,8 @@ class ControllerCarla:
             data {dict} -- Data to be shown
         """
         try:
+            steer_angle = self.ego_vehicle.get_control().steer # TODO There must be a better way
+            self.pub.publish(steer_angle)
             with self.__data_loc:
                 self.data[frame_id] = data
         except Exception as e:
@@ -288,6 +292,7 @@ class ControllerCarla:
             '/carla/ego_vehicle/collision',
             '/carla/ego_vehicle/lane_invasion',
             '/carla/ego_vehicle/speedometer',
+            '/carla/ego_vehicle/steering_angle',
             '/carla/ego_vehicle/vehicle_status',
             '/clock',
             ]

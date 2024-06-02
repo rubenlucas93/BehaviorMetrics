@@ -1,27 +1,23 @@
 import argparse
-import os
-import sys
-import threading
-import time
-import rospy
 import glob
 import json
+import os
+import sys
+import time
+from datetime import datetime
 
+import matplotlib.pyplot as plt
+import pandas as pd
 
-from ui.tui.main_view import TUI
+from pilot_carla import PilotCarla
 from utils import environment
-from utils.traffic import TrafficManager
+from utils import metrics_carla
 from utils.colors import Colors
 from utils.configuration import Config
 from utils.controller_carla import ControllerCarla
 from utils.logger import logger
-from utils.tmp_world_generator import tmp_world_generator
-from utils import metrics_carla
-from datetime import datetime
-from pilot_carla import PilotCarla
+from utils.traffic import TrafficManager
 
-import matplotlib.pyplot as plt
-import pandas as pd
 
 def check_args(argv):
     """Function that handles argument checking and parsing.

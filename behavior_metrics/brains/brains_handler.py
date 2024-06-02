@@ -43,13 +43,14 @@ class Brains(object):
             import_name = 'brains.' + robot_type + '.' + module_name
 
         if robot_type == 'CARLA':
+            # TODO (Ruben) we must adapt ddpg and ppo carla agents to this paradigm?
             module = importlib.import_module(import_name)
             Brain = getattr(module, 'Brain')
-            if self.model:
-                self.active_brain = Brain(self.sensors, self.actuators, handler=self, model=self.model,
-                                          config=self.config)
-            else:
-                self.active_brain = Brain(self.sensors, self.actuators, handler=self, config=self.config)
+            # if self.model:
+            #     self.active_brain = Brain(self.sensors, self.actuators, handler=self, model=self.model,
+            #                               config=self.config)
+            # else:
+            self.active_brain = Brain(self.sensors, self.actuators, handler=self, config=self.config)
         else:
             if import_name in sys.modules:  # for reloading sake
                 del sys.modules[import_name]

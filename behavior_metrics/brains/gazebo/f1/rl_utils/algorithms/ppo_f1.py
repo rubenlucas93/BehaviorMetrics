@@ -47,16 +47,16 @@ class ActorCritic(nn.Module):
         # actor
         if has_continuous_action_space:
             self.actor = nn.Sequential(
-                nn.Linear(state_dim, 64),
+                nn.Linear(state_dim, 12),
                 nn.Tanh(),
-                nn.Linear(64, 64),
+                nn.Linear(12, 12),
                 nn.Tanh(),
-                nn.Linear(64, action_dim),
-                nn.Tanh(),
+                nn.Linear(12, action_dim),
+                nn.Sigmoid(),
             )
         else:
             self.actor = nn.Sequential(
-                nn.Linear(state_dim, 64),
+                nn.Linear(state_dim, 61),
                 nn.Tanh(),
                 nn.Linear(64, 64),
                 nn.Tanh(),
@@ -65,11 +65,11 @@ class ActorCritic(nn.Module):
             )
         # critic
         self.critic = nn.Sequential(
-            nn.Linear(state_dim, 64),
+            nn.Linear(state_dim, 12),
             nn.Tanh(),
-            nn.Linear(64, 64),
+            nn.Linear(12, 12),
             nn.Tanh(),
-            nn.Linear(64, 1)
+            nn.Linear(12, 1)
         )
 
     def set_action_std(self, new_action_std):
@@ -123,7 +123,7 @@ class PPOF1:
     def __init__(self, state_dim, action_dim, lr_actor=0.0003, lr_critic=0.001, gamma=None, K_epochs=80, eps_clip=None,
                  has_continuous_action_space=True, action_std_init=0.2):
         self.action_std_decay_rate = 0.05  # linearly decay action_std (action_std = action_std - action_std_decay_rate)
-        self.min_action_std = 0.1  # minimum action_std (stop decay after action_std <= min_action_std)
+        self.min_action_std = 0.00001  # minimum action_std (stop decay after action_std <= min_action_std)
         self.action_std_decay_freq = int(2.5e5)  # action_std decay frequency (in num timesteps)
         self.has_continuous_action_space = has_continuous_action_space
 
@@ -150,10 +150,6 @@ class PPOF1:
                 # state = torch.FloatTensor(state).to(device)
                 state = torch.tensor(state).to(device)
                 action, action_logprob = self.policy_old.act(state)
-
-            self.buffer.states.append(state)
-            self.buffer.actions.append(action)
-            self.buffer.logprobs.append(action_logprob)
 
             return action.detach().cpu().numpy().flatten()
         else:

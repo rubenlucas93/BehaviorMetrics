@@ -30,6 +30,15 @@ class DDPGF1:
     def inference(self, state):
         tf_prev_state = tf.expand_dims(tf.convert_to_tensor(state), 0)
         sampled_actions = tf.squeeze(self.model(tf_prev_state))
-        sampled_actions = sampled_actions.numpy()
+        # legal_action_v = round(
+        #     np.clip(sampled_actions[0], 0, 1), 3
+        # )
+        # legal_action_w = round(
+        #     np.clip(sampled_actions[1], -0.5, 0.5), 3
+        # )
+        # legal_action = np.array([legal_action_v, legal_action_w])
         # sampled_actions = np.argmax(sampled_actions)
-        return np.squeeze(sampled_actions)
+        actions = np.squeeze(sampled_actions)
+        # print(actions[0])
+        # print(actions[1])
+        return actions

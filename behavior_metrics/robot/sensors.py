@@ -16,11 +16,13 @@ from utils.logger import logger
 from robot.interfaces.camera import ListenerCamera
 from robot.interfaces.laser import ListenerLaser
 from robot.interfaces.pose3d import ListenerPose3d
-try:
-    from robot.interfaces.birdeyeview import BirdEyeView
-except ModuleNotFoundError as ex:
-    logger.error('CARLA is not supported')
+# try:
+    # from robot.interfaces.birdeyeview import BirdEyeView
+# except ModuleNotFoundError as ex:
+#     logger.error('CARLA is not supported')
 from robot.interfaces.speedometer import ListenerSpeedometer
+from robot.interfaces.wheel import ListenerWheelAngle
+
 
 __author__ = 'fqez'
 __contributors__ = []
@@ -61,16 +63,22 @@ class Sensors:
             self.pose3d = self.__create_sensor(pose3d_conf, 'pose3d')
 
         # Load BirdEyeView
-        bird_eye_view_conf = sensors_config.get('BirdEyeView', None)
-        self.bird_eye_view = None
-        if bird_eye_view_conf:
-            self.bird_eye_view = self.__create_sensor(bird_eye_view_conf, 'bird_eye_view')
+        # bird_eye_view_conf = sensors_config.get('BirdEyeView', None)
+        # self.bird_eye_view = None
+        # if bird_eye_view_conf:
+        #     self.bird_eye_view = self.__create_sensor(bird_eye_view_conf, 'bird_eye_view')
 
         # Load speedometer
         speedometer_conf = sensors_config.get('Speedometer', None)
         self.speedometer = None
         if speedometer_conf:
             self.speedometer = self.__create_sensor(speedometer_conf, 'speedometer')
+
+        # Load speedometer
+        wheel_conf = sensors_config.get('wheel', None)
+        self.wheel = None
+        if wheel_conf:
+            self.wheel = self.__create_sensor(wheel_conf, 'wheel')
 
     def __create_sensor(self, sensor_config, sensor_type):
         """Fill the sensor dictionary with instances of the sensor_type and sensor_config"""
@@ -84,10 +92,13 @@ class Sensors:
                 sensor_dict[name] = ListenerLaser(topic)
             elif sensor_type == 'pose3d':
                 sensor_dict[name] = ListenerPose3d(topic)
-            elif sensor_type == 'bird_eye_view':
-                sensor_dict[name] = BirdEyeView()
+            # elif sensor_type == 'bird_eye_view':
+            #     sensor_dict[name] = BirdEyeView()
             elif sensor_type == 'speedometer':
                 sensor_dict[name] = ListenerSpeedometer(topic)
+            elif sensor_type == 'wheel':
+                sensor_dict[name] = ListenerWheelAngle(topic)
+
 
         return sensor_dict
 
@@ -106,6 +117,8 @@ class Sensors:
                 sensor = self.bird_eye_view[sensor_name]
             elif sensor_type == 'speedometer':
                 sensor = self.speedometer[sensor_name]
+            elif sensor_type == 'wheel':
+                sensor = self.wheel[sensor_name]
         except KeyError:
             return "[ERROR] No existing camera with {} name.".format(sensor_name)
 
@@ -121,6 +134,31 @@ class Sensors:
             robot.interfaces.camera.ListenerCamera instance -- camera instance
         """
         return self.__get_sensor(camera_name, 'camera')
+
+    def get_speed(self, name):
+        """Retrieve an specific existing camera
+
+        Arguments:
+            camera_name {str} -- Name of the camera to be retrieved
+
+        Returns:
+            robot.interfaces.camera.ListenerCamera instance -- camera instance
+        """
+        return self.__get_sensor(name, 'speedometer')
+
+    def get_wheel(self, name):
+        """Retrieve an specific existing camera
+
+        Arguments:
+            camera_name {str} -- Name of the camera to be retrieved
+
+        Returns:
+            robot.interfaces.camera.ListenerCamera instance -- camera instance
+        """
+        return self.__get_sensor(name, 'wheel')
+
+
+
 
     def get_laser(self, laser_name):
         """Retrieve an specific existing laser
