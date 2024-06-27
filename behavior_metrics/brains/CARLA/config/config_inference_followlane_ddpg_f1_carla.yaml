@@ -33,8 +33,9 @@ ros:
 
 inference:
   ddpg:
-    inference_ddpg_tf_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ddpg/20240417-204548_IMPROVED_S-sp5_A-continuous_MR-2073_E-3905/ACTOR
-
+    #inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/BATCH/20240625-100535S-sp5_A-continuous_MR-862_E-6136/ACTOR
+#    inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/IMPROVED/20240624-210730S-sp5_A-continuous_MR-613_E-4586/ACTOR
+    inference_ddpg_tf_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ddpg/20240625-074727S-sp5_A-continuous_MR-678_E-5791/ACTOR
 algorithm:
   ddpg:
     gamma: 0.9
@@ -68,7 +69,8 @@ states:
   sp3:
     0: [10, 50, 150]
   sp5:
-    0: [ 280, 320, 360, 400, 440 ]
+    0: [280, 340, 380, 420, 460]
+    #0: [ 260, 310, 360, 420, 480 ]
   sp10:
     0: [270, 280, 290, 300, 310, 330, 370, 400, 430, 460]
   spn:

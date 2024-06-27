@@ -7,6 +7,7 @@ import numpy as np
 import threading
 import time
 from PIL import Image
+from sklearn.linear_model import LinearRegression
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -64,7 +65,7 @@ class Brain:
         self.iteration = 0
 
         self.sync_mode = True
-        self.show_images = True
+        self.show_images = False
         # self.detection_mode = 'lane_detector'
 
         # self.previous_timestamp = 0
@@ -78,7 +79,7 @@ class Brain:
             log_dir=f"logs/Tensorboard/ppo/{time.strftime('%Y%m%d-%H%M%S')}"
         )
 
-        self.lane_model = torch.load('/home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/fastai_torch_lane_detector_model.pth')
+        self.lane_model = torch.load('/home/ruben/Desktop/RL-Studio/rl_studio/envs/carla/utils/lane_det/best_model_torch.pth')
         self.lane_model.eval()
 
         args = {
@@ -98,7 +99,7 @@ class Brain:
             "inference": self.get_inference(config_file, args['algorithm']),
         }
 
-        self.x_row = [ 280, 320, 360, 400, 440 ] # TODO Read from config
+        self.x_row = [ 300, 320, 360, 400, 440 ] # TODO Read from config
 
         params = InferenceExecutorValidator(**inference_params)
         self.inference_file = params.inference["params"]["inference_ppo_tf_actor_model_name"]
@@ -196,14 +197,20 @@ class Brain:
             ll_segment, left_mask, right_mask = self.detect_lane_detector(raw_image)[0]
         ll_segment = np.zeros_like(raw_image)
         ll_segment = self.lane_detection_overlay(ll_segment, left_mask, right_mask)
+        cv2.imshow("raw", ll_segment) if self.sync_mode and self.show_images else None
+        # Extract blue and red channels
         blue_channel = ll_segment[:, :, 0]  # Blue channel
         red_channel = ll_segment[:, :, 2]  # Red channel
-        # Combine blue and red channels into a grayscale image
+
+        lines = []
+        left_line = self.post_process_hough_lane_det(blue_channel)
+        if left_line is not None:
+            lines.append([left_line])
+        right_line = self.post_process_hough_lane_det(red_channel)
+        if right_line is not None:
+            lines.append([right_line])
         ll_segment = 0.5 * blue_channel + 0.5 * red_channel
         ll_segment = cv2.convertScaleAbs(ll_segment)
-        # Display the grayscale image
-        # processed = self.post_process(ll_segment)
-        lines = self.post_process_hough_lane_det(ll_segment)
 
         detected_lines = self.merge_and_extend_lines(lines, ll_segment)
 
@@ -230,43 +237,41 @@ class Brain:
         pil_image.show()
 
     def post_process_hough_lane_det(self, ll_segment):
-        # Step 4: Perform Hough transform to detect lines
-        ll_segment = cv2.dilate(ll_segment, (3, 3), iterations=4)
-        ll_segment = cv2.erode(ll_segment, (3, 3), iterations=2)
-        # cv2.imshow("preprocess", ll_segment) if self.sync_mode and self.show_images else None
-        edges = cv2.Canny(ll_segment, 50, 100)
+            nonzero_points = np.argwhere(ll_segment == 255)
+            if len(nonzero_points) == 0:
+                return None
 
-        # Reapply HoughLines on the dilated image
-        lines = cv2.HoughLinesP(
-            edges,  # Input edge image
-            1,  # Distance resolution in pixels
-            np.pi / 90,  # Angle resolution in radians
-            threshold=10,  # Min number of votes for valid line
-            minLineLength=6,  # Min allowed length of line
-            maxLineGap=60  # Max allowed gap between line for joining them
-        )
-        # Sort lines by their length
-        # lines = sorted(lines, key=lambda x: x[0][0] * np.sin(x[0][1]), reverse=True)[:5]
+            # Extract x and y coordinates
+            x = nonzero_points[:, 1].reshape(-1, 1)  # Reshape for scikit-learn input
+            y = nonzero_points[:, 0]
 
-        # Create a blank image to draw lines
-        line_mask = np.zeros_like(ll_segment, dtype=np.uint8)  # Ensure dtype is uint8
+            # Fit linear regression model
+            model = LinearRegression()
+            model.fit(x, y)
 
-        # Iterate over points
-        for points in lines if lines is not None else []:
-            # Extracted points nested in the list
-            x1, y1, x2, y2 = points[0]
-            # Draw the lines joing the points
-            # On the original image
-            cv2.line(line_mask, (x1, y1), (x2, y2), (255, 255, 255), 2)
+            # Predict y values based on x
+            y_pred = model.predict(x)
 
-        # Postprocess the detected lines
-        # line_mask = morphological_process(line_mask, kernel_size=5, func_type=cv2.MORPH_OPEN)
-        # line_mask = morphological_process(line_mask, kernel_size=5, func_type=cv2.MORPH_CLOSE)
-        # kernel = np.ones((3, 3), np.uint8)  # Adjust the size as needed
-        # eroded_image = cv2.erode(line_mask, kernel, iterations=1)
-        # cv2.imshow("hough", line_mask) if self.sync_mode and self.show_images else None
+            line_mask = np.zeros_like(ll_segment, dtype=np.uint8)  # Ensure dtype is uint8
 
-        return lines
+            # Draw the linear regression line
+            for i in range(len(x)):
+                cv2.circle(line_mask, (x[i][0], int(y_pred[i])), 2, (255, 0, 0), -1)
+
+            cv2.imshow("result", line_mask) if self.show_images else None
+
+            # Find the minimum and maximum x coordinates
+            min_x = np.min(x)
+            max_x = np.max(x)
+
+            # Find the corresponding predicted y-values for the minimum and maximum x coordinates
+            y1 = int(model.predict([[min_x]]))
+            y2 = int(model.predict([[max_x]]))
+
+            # Define the line segment
+            line_segment = (min_x, y1, max_x, y2)
+
+            return line_segment
 
 
     def merge_and_extend_lines(self, lines, ll_segment):
@@ -408,7 +413,8 @@ class Brain:
 
         ll_segment_stacked = np.stack(ll_segment_all, axis=-1)
         # We now show the segmentation and center lane postprocessing
-        self.display_image(ll_segment_stacked)
+        # self.display_image(ll_segment_stacked)
+        return ll_segment_stacked
 
 
     def find_lane_center(self, mask):
@@ -454,9 +460,10 @@ class Brain:
         ) = self.calculate_center(ll_segment)
 
         right_lane_normalized_distances, right_center_lane = self.choose_lane(distance_to_center_normalized, center_lanes)
-        # self.show_ll_seg_image(right_center_lane, ll_segment)
+        # if any(distance == 1 for distance in right_center_lane):
+        image_processed = self.show_ll_seg_image(right_center_lane, ll_segment)
 
-        return right_lane_normalized_distances
+        return right_lane_normalized_distances, image_processed
 
     def execute(self):
         # TODO integrate with environment
@@ -472,18 +479,25 @@ class Brain:
         image_2 = self.camera_2.getImage().data
         image_3 = self.camera_3.getImage().data
 
-        state = self.process_image(image)
+        state, image_processed = self.process_image(image)
+
         state.append(self.speedometer.getSpeedometer().data/5)
         state.append(self.wheel.getWheelAngle())
 
+
         action = self.inferencer.inference(np.array(state).astype(np.float32))
+
+        # if abs(action[1]-0.5) > 0.3:
+        #     print(state)
+        #     print(f" {action[0]} - {action[1] - 0.5}")
 
         self.motors.sendThrottle(action[0])
         self.motors.sendSteer(action[1] - 0.5)
 
         self.update_frame('frame_0', image)
 
-        # self.upd        # self.update_frame('frame_2', image_2)
-        # self.update_frame('frame_3', image_3)ate_frame('frame_1', image_1)
+        self.update_frame('frame_1', image_processed)
+        # self.update_frame('frame_3', image_3)
+        # self.update_frame('frame_1', image_1)
         self.update_pose(self.pose.getPose3d())
         #print(self.pose.getPose3d())

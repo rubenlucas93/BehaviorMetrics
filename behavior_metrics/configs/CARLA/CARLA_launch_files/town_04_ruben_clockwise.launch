@@ -10,7 +10,7 @@
   <arg name="vehicle_filter" default='vehicle.*'/>
   <!--<arg name="spawn_point" default=""/>--><!-- use comma separated format "x,y,z,roll,pitch,yaw" -->
   <!--<arg name="spawn_point" default="248.7, 371.2, 1.37, 0.0, 0.0, 0.0"/>-->
-  <arg name="spawn_point" default="-401.916412, -9.2, 1.37, 0.0, 0.0, 179.6"/>
+  <arg name="spawn_point" default="-350.916412, -9.2, 1.37, 0.0, 0.0, 0.6"/>
   <!-- Map to load on startup (either a predefined CARLA town (e.g. 'Town01'), or a OpenDRIVE map file) -->
   <arg name="town" default='Town04'/>
 
@@ -40,7 +40,7 @@
     <arg name="spawn_sensors_only" value="false"/>
   </include>
 
-   <!-- <include file="$(find carla_manual_control)/launch/carla_manual_control.launch">
+  <!-- <include file="$(find carla_manual_control)/launch/carla_manual_control.launch">
     <arg name='role_name' value='$(arg role_name)'/>
   </include> -->
 

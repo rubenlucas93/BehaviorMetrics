@@ -341,6 +341,7 @@ def main():
                                 experiments_information['world_counter'][world_counter]['brain_counter'][brain_counter]['repetition_counter'][repetition_counter] = experiment_attempts
                                 logger.info("Launching: python3 script_manager_carla.py -c " + config_data['config'][0] + " -s -world_counter " + str(world_counter) + " -brain_counter " + str(brain_counter) + " -repetition_counter " + str(repetition_counter))
                                 logger.info("Experiment attempt: " + str(experiment_attempts+1))
+                                logger.info(f"Running model {app_configuration.brain_path[brain_counter]} on world {world}")
                                 current_experiment_starting_time = time.time()
                                 success = os.system("python3 script_manager_carla.py -c " + config_data['config'][0] + " -s -world_counter " + str(world_counter) + " -brain_counter " + str(brain_counter) + " -repetition_counter " + str(repetition_counter))
                                 if success != 0:
