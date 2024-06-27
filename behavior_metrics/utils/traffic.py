@@ -11,13 +11,16 @@ class TrafficManager:
     def __init__(self, n_vehicle, n_walker, percentage_walker_running=0.0, percentage_walker_crossing=0.0, async_mode=False, port=8000):
         self.client = carla.Client('localhost', 2000)
         self.world = self.client.get_world()
-        if not async_mode:
-            settings = self.world.get_settings()
-            settings.synchronous_mode = True 
-            self.world.apply_settings(settings)
-
         traffic_manager = self.client.get_trafficmanager(port)
-        traffic_manager.set_synchronous_mode(True)
+        settings = self.world.get_settings()
+        if not async_mode:
+            settings.synchronous_mode = True
+            traffic_manager.set_synchronous_mode(True)
+        else:
+            settings.synchronous_mode = False
+            traffic_manager.set_synchronous_mode(False)
+
+        self.world.apply_settings(settings)
         traffic_manager.set_global_distance_to_leading_vehicle(2.5)
         traffic_manager.set_hybrid_physics_mode(True)
         traffic_manager.set_hybrid_physics_radius(70.0)
@@ -27,7 +30,8 @@ class TrafficManager:
         self.n_walker = n_walker
         self.percentage_walker_running = percentage_walker_running
         self.percentage_walker_crossing = percentage_walker_crossing
-
+        current_settings = self.world.get_settings()
+        print(f"Current World Settings: {current_settings}")
         self.vehicles = []
         self.walkers = []
         self.walker_actors = []
