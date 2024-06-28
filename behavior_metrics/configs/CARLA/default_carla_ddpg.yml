@@ -47,7 +47,7 @@ Behaviors:
             ImageTranform: ''
         Type: 'CARLA'
     Simulation:
-        World: configs/CARLA/CARLA_launch_files/town_04_ruben_clockwise.launch
+        World: configs/CARLA/CARLA_launch_files/town_04_ruben.launch
         RandomSpawnPoint: False
     Dataset:
         In: '/tmp/my_bag.bag'

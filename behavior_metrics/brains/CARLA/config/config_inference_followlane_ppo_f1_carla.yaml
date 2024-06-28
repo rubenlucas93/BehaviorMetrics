@@ -116,7 +116,7 @@ carla_environments:
     generation: "2"
     rolename: "hero" #name
     gamma: 2.2 #for camera
-    sync: True #syncronous mode or async
+    sync: False #syncronous mode or async
     detection_mode: lane_detector
     fixed_delta_seconds: 0.1
     async_forced_delta_seconds: 0

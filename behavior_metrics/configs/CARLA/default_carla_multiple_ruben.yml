@@ -58,8 +58,8 @@ Behaviors:
         Name: "Experiment name"
         Description: "Experiment description"
         UseWorldTimeouts: True
-        Timeout: [220, 220] # for each world!
-        Repetitions: 1
+        Timeout: [190, 190] # for each world!
+        Repetitions: 3
     Simulation:
         World: [
             configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
