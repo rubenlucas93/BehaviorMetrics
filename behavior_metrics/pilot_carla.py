@@ -162,8 +162,8 @@ class PilotCarla(threading.Thread):
                 dt = datetime.now() - start_time
                 ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
                 self.brain_iterations_real_time.append(ms / 1000)
-                if ms < self.time_cycle:
-                    time.sleep((self.time_cycle - ms) / 1000.0)
+                # if ms < self.time_cycle:
+                #     time.sleep((self.time_cycle - ms) / 1000.0)
                 self.real_time_factors.append(self.real_time_factor)
                 self.brain_iterations_simulated_time.append(self.ros_clock_time - start_time_ros)
                 if not self.async_mode:

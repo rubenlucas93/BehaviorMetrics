@@ -33,9 +33,9 @@ ros:
 
 inference:
   ddpg:
-    #inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/BATCH/20240625-100535S-sp5_A-continuous_MR-862_E-6136/ACTOR
-#    inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/IMPROVED/20240624-210730S-sp5_A-continuous_MR-613_E-4586/ACTOR
     inference_ddpg_tf_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ddpg/20240625-074727S-sp5_A-continuous_MR-678_E-5791/ACTOR
+#    inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/BATCH/20240709-131301S-sp5_A-continuous_MR-1649_E-2600/ACTOR
+#    inference_ddpg_tf_model_name: /home/ruben/Desktop/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_TensorFlow/IMPROVED/20240624-210730S-sp5_A-continuous_MR-613_E-4586/ACTOR
 algorithm:
   ddpg:
     gamma: 0.9

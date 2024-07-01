@@ -41,6 +41,8 @@ class InferenceExecutorValidator(BaseModel):
 class Brain:
 
     def __init__(self, sensors, actuators, handler, config=None):
+        self.last_action = [0, 0]
+        self.last_state = [0, 0, 0, 0, 0]
         self.detection_mode = "lane_detector"
         self.camera = sensors.get_camera('camera_0')
         self.camera_1 = sensors.get_camera('camera_1')
@@ -64,6 +66,7 @@ class Brain:
         self.color_image_lock = threading.Lock()
         self.cont = 0
         self.iteration = 0
+        self.step = 0
 
         self.sync_mode = True
         self.show_images = False
@@ -589,6 +592,7 @@ class Brain:
     def execute(self):
         # TODO integrate with environment
         # observation, reward, done, info = self.env.step(action, self.step)
+        self.step += 1
 
         now = time.time()
         fps = 1 / (now - self.previous_time)
@@ -600,16 +604,48 @@ class Brain:
         image_2 = self.camera_2.getImage().data
         image_3 = self.camera_3.getImage().data
 
+        sensor_time = time.time()
+        self.tensorboard.update_times(sensor_time - self.previous_time, "sensor")
+
         state, image_processed = self.process_image(image)
-        state.append(self.speedometer.getSpeedometer().data/5)
+
+        states_above_threshold = sum(1 for state_value in state if state_value > 0.9)
+
+        if states_above_threshold is None:
+            states_above_threshold = 0
+
+        if states_above_threshold > len(state) - 3:
+            bad_perception = True
+        else:
+            bad_perception = False
+
+        perception_time = time.time()
+        self.tensorboard.update_times(perception_time - sensor_time, "perception")
+
+        speed = self.speedometer.getSpeedometer().data
+        differences = [a - b for a, b in zip(self.last_state, state)]
+        average_difference = sum(differences) / len(differences)
+        # print(average_difference)
+        self.last_state = state
+        state.append(speed/5)
         state.append(self.wheel.getWheelAngle())
 
-        # print(state)
+        if not bad_perception and abs(average_difference) < 0.07:
+            action = self.inferencer.inference(np.array(state))
+        else:
+            action = self.last_action # TODO test [0, 0] if it does not work
+        self.last_action = action
 
-        action = self.inferencer.inference(np.array(state))
+        if self.step % 20:
+            self.tensorboard.update_stats(speed = speed)
+
+        self.tensorboard.update_actions(action, self.step)
 
         self.motors.sendThrottle(action[0])
         self.motors.sendSteer(action[1])
+
+        action_time = time.time()
+        self.tensorboard.update_times(action_time - perception_time, "action")
 
         self.update_frame('frame_0', image)
         self.update_frame('frame_1', image_processed)
@@ -617,3 +653,6 @@ class Brain:
         # self.update_frame('frame_3', image_3)
         self.update_pose(self.pose.getPose3d())
         #print(self.pose.getPose3d())
+
+        display_time = time.time()
+        self.tensorboard.update_times(display_time - action_time, "display")

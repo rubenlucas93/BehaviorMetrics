@@ -38,7 +38,8 @@ retraining:
 inference:
   ppo:
 #     inference_ppo_tf_actor_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ppo/20240620-111627MaxReward-579_Epoch-418_AM-132.84730539576148_AS-7.691488488775511
-     inference_ppo_tf_actor_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ppo/20240626-202642MaxReward-438_Epoch-188_AM-715.2847226554654_AS-9.594198673599848
+#     inference_ppo_tf_actor_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ppo/20240626-202642MaxReward-438_Epoch-188_AM-715.2847226554654_AS-9.594198673599848
+     inference_ppo_tf_actor_model_name: /home/ruben/Desktop/my-BehaviorMetrics/behavior_metrics/models/CARLA/ppo/20240706-105716MaxReward-183_Epoch-3918_AM-1325.8508083005318_AS-7.768547400546177
      inference_ppo_tf_critic_model_name:
 
 algorithm:

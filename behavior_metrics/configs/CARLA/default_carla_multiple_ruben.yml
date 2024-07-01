@@ -39,8 +39,8 @@ Behaviors:
                     MaxW: 0.3
                     
         BrainPath: [
-            #'brains/CARLA/brain_carla_ddpg.py',
-            'brains/CARLA/brain_carla_ppo.py',
+            'brains/CARLA/brain_carla_ddpg.py',
+            #'brains/CARLA/brain_carla_ppo.py',
             ]
         PilotTimeCycle: 50
         AsyncMode: True

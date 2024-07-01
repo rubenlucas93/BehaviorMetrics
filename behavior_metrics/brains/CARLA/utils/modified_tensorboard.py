@@ -45,6 +45,12 @@ class ModifiedTensorBoard(TensorBoard):
             self.fps_step += 1
             self.writer.flush()
 
+    def _write_times(self, time, section):
+        with self.writer.as_default():
+            tf.summary.scalar(section, time, step=self.fps_step)
+            self.fps_step += 1
+            self.writer.flush()
+
     # Custom method for saving own metrics
     # Creates writer, writes custom metrics and closes writer
     def update_stats(self, **stats):
@@ -52,6 +58,9 @@ class ModifiedTensorBoard(TensorBoard):
 
     def update_fps(self, fps):
         self._write_fps(fps)
+
+    def update_times(self, time, section):
+        self._write_times(time, section)
     def update_actions(self, actions, index):
         with self.writer.as_default():
             tf.summary.histogram("actions_v", actions[0], step=index)
