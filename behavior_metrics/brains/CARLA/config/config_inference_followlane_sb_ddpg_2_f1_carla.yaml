@@ -1,0 +1,139 @@
+settings:
+  mode: inference # training, retraining, inference
+  task: follow_lane_carla # follow_line_gazebo, follow_lane_gazebo, autoparking_gazebo
+  algorithm: ddpg_2 # qlearn, dqn, ddpg, ppo
+  simulator: carla # openai, carla, gazebo, sumo
+  environment_set: carla_environments # gazebo_environments, carla_environments
+  env: follow_lane # Town01, simple, nurburgring, montreal, curves, simple_laser, manual, autoparking
+  agent: auto_carla # auto_carla, autoparkingRL, auto_carla, mountain_car, robot_mesh, cartpole, turtlebot
+  actions: continuous # slow, fast
+  appended_states: 3
+  stage: v
+  states: sp5 #image, sp1 (simplified perception with 1 point), sp3 (simplified perception with 3 points), spn (simplified perception with n points)
+  rewards: followlane_center # followline_center, followline_center_v_w_linear
+  framework: baselines # TensorFlow, Pytorch
+  total_episodes: 5000000
+  training_time: 72
+  models_dir: "./checkpoints"
+  recorder_carla_dir: "./recorders"
+  logs_dir: "./logs"
+  metrics_dir: "./metrics"
+  debug_stats: false
+  show_monitoring: false
+  steps_to_decrease: 5000
+  decrease_substraction: 0.003
+  decrease_min: 0.003
+  entropy_factor: 0
+  use_curves_state: False
+  reward_params:
+    function: pow
+    punish_zig_zag_value: 5
+    punish_ineffective_vel: 1
+    beta_1: 0
+
+ros:
+  ros_master_uri: "11311"
+  gazebo_master_uri: "11345"
+
+retraining:
+  ddpg:
+    retrain_ddpg_tf_model_name_w: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_baselines/20250127-095549/best_model.zip
+    retrain_ddpg_tf_model_name_v: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_2_auto_carla_baselines/20250202-203108/best_model.zip
+algorithm:
+  ddpg_2:
+    gamma: 0.92
+    tau: 0.005
+    std_dev: 0.2 # Note this std dev is applied to normalized actions (-1, 1) and generates noise between +-2*std_dev
+    model_name: DDPG_Actor_conv2d32x64_Critic_conv2d32x64
+    replay_memory_size: 10_000
+    memory_fraction: 0.20
+    critic_lr: 0.0002
+    actor_lr: 0.0001
+    buffer_capacity: 600180
+    batch_size: 333
+
+agents:
+  auto_carla:
+    camera_params:
+      width: 640
+      height: 480
+      center_image: 320
+      raw_image: False
+      image_resizing: 100
+      new_image_size: 32
+      num_regions: 16
+      lower_limit: 220
+
+states:
+  image:
+    0: [3]
+  sp1:
+    0: [40] #TODO
+  sp3:
+    0: [10, 50, 150]
+  sp5:
+    0: [270, 280, 360, 410, 460]
+  sp10:
+    0: [270, 280, 290, 295, 320, 360, 390, 420, 450, 480]
+  spn:
+    0: [10]
+
+actions:
+  continuous:
+    v: [-1, 1]
+    w: [-1, 1]
+#    b: [0, 1]
+
+
+rewards:
+  followlane_center:
+
+carla_environments:
+  follow_lane:
+    env_name: CarlaEnv-v0
+    town: Town04 #Town01, Town02, Town03, Town04, Town05, Town10HD
+    # Town01_Opt, Town02_Opt, Town03_Opt, Town04_Opt, Town05_Opt, Town10HD_Opt
+    car: model1
+    weather: ClearNoon #dynamic, argparse
+    traffic_pedestrians: False
+    city_lights: False
+    car_lights: False
+    estimated_steps: 500
+    save_episodes: 5 # not used in this carla ppo
+    save_every_step: 100 # not used in this carla ppo
+    goal_pose:
+    init_pose:
+    filter: vehicle.*
+    generation: "2"
+    rolename: "hero" #name
+    gamma: 2.2 #for camera
+    sync: True #syncronous mode or async
+    detection_mode: carla_perfect  # carla_perfect
+    fixed_delta_seconds: 0.05
+    async_forced_delta_seconds: 0
+    reset_threshold: 0.35
+    alternate_pose: True
+    spawn_points: [
+#      [ -320.872070, 15.83397, 0.416225, 0.118217, 176.971695, 0.924344 ], # sharp to left
+#      [ -475.506342, 352.208710, 0.807793, 0.051254, 55.662395, 0.072115 ], #sliht curve to left
+#      [12.93741, 157.040146, 0.09260, 0.051254, -90.375160, 0.1006703], # straight
+      [384.71470, -170.460329, 0.307339, 0.031453, 90.310402, 0.008101], # sharp to right
+#      [199.221252, -367.893829, 0.809260, 0.248796, 0.152361, -0.002625], # straight
+#      [ 334.204407,  13.815439, 0.608849, 1.506945, -179.198761, -1.299316] # long straight
+      #   [235.603699, 12.395636, 5.228042, 3.577455, 0.124573, -0.008118], # straight reverse
+   #   [389.385938, -179.152158, 0.457793, 0.082516, 270.889893, 0.078263] # straight reverse
+    ]
+    front_car: none # none, fixed, stopped, driving, incoming, outgoing
+    front_car_spawn_points: [
+      [ 382.315643, -263.973114, 0.805201, -0.211087, 76.833618, -0.360352 ]
+    ]
+    waypoints_meters: 5 #distance between waypoints in meters
+    waypoints_init: 6912 # {6912} 1471 6927 899 6294    waypoints_target: 959 #961
+    waypoints_target: 959 #961
+    waypoints_lane_id: -1
+    waypoints_road_id: 8
+
+carla:
+  carla_server: localhost
+  carla_client: 4002
+  manager_port: 8022

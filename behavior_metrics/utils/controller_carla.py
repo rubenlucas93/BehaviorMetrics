@@ -32,7 +32,7 @@ try:
 except ModuleNotFoundError as ex:
     logger.error('CARLA is not supported')
 from std_srvs.srv import Empty
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image as msgImage
 from cv_bridge import CvBridge
 from datetime import datetime
 from std_msgs.msg import String, Float32
@@ -44,6 +44,8 @@ try:
 except ModuleNotFoundError as ex:
     logger.error('CARLA is not supported')
 from PIL import Image
+import numpy as np
+
 __author__ = 'sergiopaniego'
 __contributors__ = []
 __license__ = 'GPLv3'
@@ -69,30 +71,58 @@ class ControllerCarla:
         self.pose3D_data = None
         self.recording = False
         self.cvbridge = CvBridge()
+        self.image_publisher = rospy.Publisher('/carla/ego_vehicle/rgb_view/image', msgImage, queue_size=10)
 
         client = carla.Client('localhost', 2000)
         client.set_timeout(100.0) # seconds
         self.world = client.get_world()
         time.sleep(5) # takes a few second for the correct map to finish loading
         self.carla_map = self.world.get_map()
-        while len(self.world.get_actors().filter('vehicle.*')) == 0:
-            logger.info("Waiting for vehicles!")
-            time.sleep(1)
-        ego_vehicle_role_name = "ego_vehicle"
-        self.ego_vehicle = None
-        while self.ego_vehicle is None:
-            for vehicle in self.world.get_actors().filter('vehicle.*'):
-                if vehicle.attributes.get('role_name') == ego_vehicle_role_name:
-                    self.ego_vehicle = vehicle
-                    break
-            if self.ego_vehicle is None:
-                logger.info("Waiting for vehicle with role_name 'ego_vehicle'")
-                time.sleep(1)  # sleep for 1 second before checking again
+        # self.create_actors_in_carla()
+        self.wait_for_actors_creation()
         self.map_waypoints = self.carla_map.generate_waypoints(0.5)
         self.weather = self.world.get_weather()
         self.pub = rospy.Publisher('/carla/ego_vehicle/steering_angle', Float32, queue_size=1)
 
-        
+    def process_camera_image(self, carla_image):
+        # # Convert CARLA image to a ROS Image message and publish it
+        # array = np.frombuffer(carla_image.raw_data, dtype=np.uint8)
+        # array = array.reshape((carla_image.height, carla_image.width, 4))  # BGRA format
+        #
+        # # Convert the BGRA CARLA image to BGR, which OpenCV and ROS Image expect
+        # bgr_image = array[:, :, :3][:, :, ::-1]
+        # # Convert to ROS Image message and publish
+        # ros_image = self.cvbridge.cv2_to_imgmsg(bgr_image, encoding="bgr8")
+        """
+        Function to transform the received carla camera data into a ROS image message
+        """
+        image_data_array, encoding = self.get_carla_image_data_array(
+            carla_image)
+        img_msg = self.cvbridge.cv2_to_imgmsg(image_data_array, encoding=encoding)
+        # the camera data is in respect to the camera's own frame
+        # img_msg.header = self.get_msg_header(timestamp=carla_image.timestamp)
+
+        self.image_publisher.publish(img_msg)
+
+    def get_carla_image_data_array(self, carla_image):
+        """
+        Function (override) to convert the carla image to a numpy data array
+        as input for the cv_bridge.cv2_to_imgmsg() function
+
+        The RGB camera provides a 4-channel int8 color format (bgra).
+
+        :param carla_image: carla image object
+        :type carla_image: carla.Image
+        :return tuple (numpy data array containing the image information, encoding)
+        :rtype tuple(numpy.ndarray, string)
+        """
+
+        carla_image_data_array = np.ndarray(
+            shape=(carla_image.height, carla_image.width, 4),
+            dtype=np.uint8, buffer=carla_image.raw_data)
+
+        return carla_image_data_array, 'bgra8'
+
     # GUI update
     def update_frame(self, frame_id, data):
         """Update the data to be retrieved by the view.
@@ -104,8 +134,8 @@ class ControllerCarla:
             data {dict} -- Data to be shown
         """
         try:
-            steer_angle = self.ego_vehicle.get_control().steer # TODO There must be a better way
-            self.pub.publish(steer_angle)
+            # steer_angle = self.ego_vehicle.get_control().steer # TODO There must be a better way
+            # self.pub.publish(steer_angle)
             with self.__data_loc:
                 self.data[frame_id] = data
         except Exception as e:
@@ -282,9 +312,9 @@ class ControllerCarla:
             self.experiment_metrics['experiment_repetition'] = repetition_counter
         
 
-        self.metrics_record_dir_path = metrics_record_dir_path
-        os.mkdir(self.metrics_record_dir_path + self.time_str)
-        self.experiment_metrics_bag_filename = self.metrics_record_dir_path + self.time_str + '/' + self.time_str + '.bag'
+        self.metrics_record_dir_path = metrics_record_dir_path + '/' + f"{self.time_str}_{current_brain_tail}"
+        os.makedirs(self.metrics_record_dir_path, exist_ok=True)
+        self.experiment_metrics_bag_filename = self.metrics_record_dir_path + '/' + self.time_str + '.bag'
 
         topics = [
             '/carla/npc_vehicle_1/odometry',
@@ -325,6 +355,7 @@ class ControllerCarla:
         command = shlex.split(command)
         with open("logs/.roslaunch_stdout.log", "w") as out, open("logs/.roslaunch_stderr.log", "w") as err:
             subprocess.Popen(command, stdout=out, stderr=err)
+        logger.info("roslaunch_stdout read")
 
         # Wait for rosbag file to be closed. Otherwise it causes error
         while os.path.isfile(self.experiment_metrics_bag_filename + '.active'):
@@ -349,6 +380,7 @@ class ControllerCarla:
             self.experiment_metrics['bird_eye_view_unique_images'] = 0
             self.experiment_metrics['bird_eye_view_unique_images_percentage'] = 0
 
+
         self.experiment_metrics['brain_iterations_simulated_time'] = len(self.pilot.brain_iterations_simulated_time)
         self.experiment_metrics['mean_brain_iterations_real_time'] = mean_brain_iterations_real_time
         self.experiment_metrics['brain_iterations_frequency_real_time'] = brain_iterations_frequency_real_time
@@ -357,7 +389,9 @@ class ControllerCarla:
         self.experiment_metrics['brain_iterations_frequency_simulated_time'] = brain_iterations_frequency_simulated_time
         self.experiment_metrics['experiment_total_real_time'] = end_time - self.pilot.pilot_start_time
 
-        experiment_metrics_filename = self.metrics_record_dir_path + self.time_str + '/' + self.time_str
+        experiment_metrics_filename = self.metrics_record_dir_path + '/' + self.time_str
+
+        logger.info("reading bag metrics")
         self.experiment_metrics = metrics_carla.get_metrics(self.experiment_metrics, self.experiment_metrics_bag_filename, self.map_waypoints, experiment_metrics_filename, self.pilot.configuration)
         self.experiment_metrics['collisions_vehicle'] = 0
         self.experiment_metrics['collisions_walker'] = 0
@@ -376,6 +410,7 @@ class ControllerCarla:
                     self.experiment_metrics['collisions_static'] += 1
             else:
                 print(f"No actor found with ID {actor_id}")
+
 
         if hasattr(self.pilot.brains.active_brain, 'red_light_counter'):
             self.experiment_metrics['traffic_light_infractions'] = self.pilot.brains.active_brain.red_light_counter
@@ -404,7 +439,9 @@ class ControllerCarla:
                                                     CARLA_INFRACTION_PENALTIES['red_light']**self.experiment_metrics['traffic_light_infractions'] * \
                                                     CARLA_INFRACTION_PENALTIES['wrong_turn']**wrong_turn_counter * \
                                                     CARLA_INFRACTION_PENALTIES['time_out']**time_out_counter
+        logger.info("saving metrics")
         self.save_metrics(first_images, last_images)
+        logger.info("metrics saved")
 
         for key, value in self.experiment_metrics.items():
             logger.info('* ' + str(key) + ' ---> ' + str(value))
@@ -413,17 +450,60 @@ class ControllerCarla:
 
 
     def save_metrics(self, first_images, last_images):        
-        with open(self.metrics_record_dir_path + self.time_str + '/' + self.time_str + '.json', 'w') as f:
+        logger.info(f"saving {self.metrics_record_dir_path}")
+        with open(self.metrics_record_dir_path + '/' + self.time_str + '.json', 'w') as f:
             json.dump(self.experiment_metrics, f)
         logger.info("Metrics stored in JSON file")
 
         for counter, image in enumerate(first_images):
             im = Image.fromarray(image)
-            im.save(self.metrics_record_dir_path + self.time_str + '/' + self.time_str + "_first_image_" + str(counter) + ".jpeg")
+            im.save(self.metrics_record_dir_path + '/' + self.time_str + "_first_image_" + str(counter) + ".jpeg")
 
         for counter, image in enumerate(last_images):
             im = Image.fromarray(image)
-            im.save(self.metrics_record_dir_path + self.time_str + '/' + self.time_str + "_last_image_" + str(counter) + ".jpeg")
+            im.save(self.metrics_record_dir_path + '/' + self.time_str + "_last_image_" + str(counter) + ".jpeg")
 
+    def create_actors_in_carla(self):
+        car_bp = self.world.get_blueprint_library().filter("vehicle.*")[0]
+        location = carla.Transform(
+            carla.Location(
+                x=11.310266,
+                y=-160.087921,
+                z=1.2247767,
+            ),
+            carla.Rotation(
+                pitch=0.0,
+                yaw=-90.224854,
+                roll=0.0,
+            ),
+        )
 
+        car_bp.set_attribute('role_name', 'ego_vehicle')
+        self.car = self.world.spawn_actor(car_bp, location)
+        while self.car is None:
+            self.car = self.world.spawn_actor(car_bp, location)
+        self.ego_vehicle = self.car
+        camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
+        camera_bp.set_attribute("image_size_x", "800")
+        camera_bp.set_attribute("image_size_y", "600")
+        camera_bp.set_attribute("fov", "90")
+        camera_transform = carla.Transform(
+            carla.Location(x=-4.5, z=2.2),  # 6 meters behind and 2 meters above the vehicle
+            carla.Rotation(pitch=20.0, yaw=0, roll=0)  # Slight pitch adjustment to look down slightly, if desired
+        )
+        self.camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to=self.ego_vehicle)
 
+    def wait_for_actors_creation(self):
+        while len(self.world.get_actors().filter('vehicle.*')) == 0:
+            logger.info("Waiting for vehicles!")
+            time.sleep(1)
+        ego_vehicle_role_name = "ego_vehicle"
+        self.ego_vehicle = None
+        while self.ego_vehicle is None:
+            for vehicle in self.world.get_actors().filter('vehicle.*'):
+                if vehicle.attributes.get('role_name') == ego_vehicle_role_name:
+                    self.ego_vehicle = vehicle
+                    break
+            if self.ego_vehicle is None:
+                logger.info("Waiting for vehicle with role_name 'ego_vehicle'")
+                time.sleep(1)  # sleep for 1 second before checking again

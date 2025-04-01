@@ -111,8 +111,16 @@ def get_metrics(experiment_metrics, experiment_metrics_bag_filename, map_waypoin
     data_file = experiment_metrics_bag_filename.split('.bag')[0] + '/carla-ego_vehicle-vehicle_status.csv'
     dataframe_vehicle_status = pd.read_csv(data_file)
     vehicle_status_points = []
+    brake_points = []
+    checkpoints_steer = []
     for index, row in dataframe_vehicle_status.iterrows():
         vehicle_status_points.append(row)
+        if row["control.brake"] > 0:
+            action_applied = -row["control.brake"]
+        else:
+            action_applied = row["control.throttle"]
+        brake_points.append(action_applied)
+        checkpoints_steer.append(row["control.steer"])
 
     if len(checkpoints) > 1:
         starting_point = checkpoints[0]
@@ -131,7 +139,9 @@ def get_metrics(experiment_metrics, experiment_metrics_bag_filename, map_waypoin
             experiment_metrics['bird_eye_view_images_per_second'] = experiment_metrics['bird_eye_view_images'] / experiment_metrics['experiment_total_simulated_time']
             experiment_metrics['bird_eye_view_unique_images_per_second'] = experiment_metrics['bird_eye_view_unique_images'] / experiment_metrics['experiment_total_simulated_time']
 
-        experiment_metrics = get_position_deviation_and_effective_completed_distance(experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename, speedometer_points, collisions_checkpoints, lane_invasion_checkpoints)
+        logger.info("getting position deviation and completed distance")
+
+        experiment_metrics = get_position_deviation_and_effective_completed_distance(experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename, speedometer_points, collisions_checkpoints, lane_invasion_checkpoints, brake_points, checkpoints_steer)
         experiment_metrics['completed_laps'] = get_completed_laps(checkpoints, starting_point)
         shutil.rmtree(experiment_metrics_bag_filename.split('.bag')[0])
         return experiment_metrics
@@ -276,7 +286,31 @@ def get_lane_invasions(experiment_metrics, lane_invasion_points, df_checkpoints)
     experiment_metrics['lane_invasions'] = len(lane_invasion_checkpoints_different)
     return experiment_metrics, lane_invasion_checkpoints
 
-def get_position_deviation_and_effective_completed_distance(experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename, speedometer, collision_points, lane_invasion_checkpoints):
+
+# def get_brake_points(experiment_metrics, brake_points, df_checkpoints):
+#     brake_checkpoints = []
+#     brake_checkpoints_different = []
+#     previous_brake_checkpoints_x, previous_brake_checkpoints_y = 0, 0
+#     previous_time = 0
+#     for point in brake_points:
+#         idx = (df_checkpoints['Time'] - point['Time']).abs().idxmin()
+#         brake_point = df_checkpoints.iloc[idx]
+#
+#         brake_checkpoints.append(point)
+#         point_1 = np.array([brake_point['pose.pose.position.x'], brake_point['pose.pose.position.y']])
+#         point_2 = np.array([previous_brake_checkpoints_x, previous_brake_checkpoints_y])
+#         dist = (point_2 - point_1) ** 2
+#         dist = np.sum(dist, axis=0)
+#         dist = np.sqrt(dist)
+#         if dist > 1 and point['Time'] - previous_time > 0.5:
+#             brake_checkpoints_different.append(brake_point)
+#         previous_time = point['Time']
+#         previous_brake_checkpoints_x, previous_brake_checkpoints_y = brake_point['pose.pose.position.x'], brake_point['pose.pose.position.y']
+#
+#     experiment_metrics['brakes'] = len(brake_checkpoints)
+#     return experiment_metrics, brake_checkpoints
+
+def get_position_deviation_and_effective_completed_distance(experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename, speedometer, collision_points, lane_invasion_checkpoints, brake_checkpoints, checkpoints_steer):
     map_waypoints_tuples = []
     map_waypoints_tuples_x = []
     map_waypoints_tuples_y = []
@@ -285,7 +319,9 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
             map_waypoints_tuples_x.append(-waypoint.transform.location.x)
             map_waypoints_tuples_y.append(waypoint.transform.location.y)
             map_waypoints_tuples.append((-waypoint.transform.location.x, waypoint.transform.location.y))
-        elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town06' or experiment_metrics['carla_map'] == 'Carla/Maps/Town06_Opt'):
+        elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town06'
+                or experiment_metrics['carla_map'] == 'Carla/Maps/Town10HD'
+                or experiment_metrics['carla_map'] == 'Carla/Maps/Town06_Opt'):
             map_waypoints_tuples_x.append(waypoint.transform.location.x)
             map_waypoints_tuples_y.append(-waypoint.transform.location.y)
             map_waypoints_tuples.append((waypoint.transform.location.x, -waypoint.transform.location.y))
@@ -293,7 +329,8 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
             map_waypoints_tuples_x.append(waypoint.transform.location.x)
             map_waypoints_tuples_y.append(waypoint.transform.location.y)
             map_waypoints_tuples.append((waypoint.transform.location.x, waypoint.transform.location.y))
-            
+
+    logger.info("got waypoints")
     checkpoints_tuples = []
     checkpoints_tuples_x = []
     checkpoints_tuples_y = []
@@ -318,34 +355,84 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
         checkpoints_tuples_y.append(checkpoint_y)
         checkpoints_speeds.append(current_checkpoint[2])
         checkpoints_tuples.append((checkpoint_x, checkpoint_y, current_checkpoint[2]))
-    min_dists = []
-    best_checkpoint_points_x = []
-    best_checkpoint_points_y = []
 
+    logger.info("got checkpoints")
+
+    checkpoints_array = np.array(checkpoints_tuples)  # Shape: (num_checkpoints, 2 or 3)
+    checkpoints_array = checkpoints_array[:, :2]
+    map_waypoints_array = np.array(map_waypoints_tuples)  # Shape: (num_waypoints, 2 or 3)
+
+
+    num_checkpoints = checkpoints_array.shape[0]
+    num_waypoints = map_waypoints_array.shape[0]
+
+    best_checkpoint_points = np.zeros_like(checkpoints_array)  # Closest waypoints
+    min_dists = np.full(num_checkpoints, np.inf)  # Start with large distances
+
+    # List to store covered checkpoints
     covered_checkpoints = []
-    for error_counter, checkpoint in enumerate(checkpoints_tuples):
-        min_dist = 100
-        for x, perfect_checkpoint in enumerate(map_waypoints_tuples):
-            point_1 = np.array([checkpoint[0], checkpoint[1]])
-            point_2 = np.array([perfect_checkpoint[0], perfect_checkpoint[1]])
-            dist = (point_2 - point_1) ** 2
-            dist = np.sum(dist, axis=0)
-            dist = np.sqrt(dist)
-            if dist < min_dist:
-                min_dist = dist
-                best_checkpoint = x
-                best_checkpoint_point_x = point_2[0]
-                best_checkpoint_point_y = point_2[1]
-        best_checkpoint_points_x.append(best_checkpoint_point_x)
-        best_checkpoint_points_y.append(best_checkpoint_point_y)
-        if min_dist < 100:
-            min_dists.append(min_dist)
-            if len(covered_checkpoints) == 0 or (len(covered_checkpoints) > 0 and covered_checkpoints[len(covered_checkpoints)-1][0] != best_checkpoint_point_x and covered_checkpoints[len(covered_checkpoints)-1][1] != best_checkpoint_point_y):
-                if min_dist < 1:
-                    covered_checkpoints.append((best_checkpoint_point_x, best_checkpoint_point_y))
+
+    # Process waypoints in chunks
+    for start_idx in range(0, num_waypoints, 10000):
+        end_idx = min(start_idx + 10000, num_waypoints)
+        map_chunk = map_waypoints_array[start_idx:end_idx]  # Extract chunk of waypoints
+
+        # Compute distances for the current chunk
+        distances_chunk = np.linalg.norm(
+            checkpoints_array[:, np.newaxis, :] - map_chunk[np.newaxis, :, :], axis=2
+        )
+
+        # Update the minimum distances and corresponding best checkpoint points
+        is_closer = distances_chunk < min_dists[:, np.newaxis]
+        min_dists = np.where(is_closer.any(axis=1), distances_chunk.min(axis=1), min_dists)
+        best_indices_chunk = is_closer.argmax(axis=1)
+
+        for i, closer in enumerate(is_closer.any(axis=1)):
+            if closer:
+                best_checkpoint_points[i] = map_chunk[best_indices_chunk[i]]
+
+    # Separate x, y coordinates for final output
+    best_checkpoint_points_x = best_checkpoint_points[:, 0].tolist()
+    best_checkpoint_points_y = best_checkpoint_points[:, 1].tolist()
+
+    # Filter covered checkpoints
+    for i, dist in enumerate(min_dists):
+        best_x, best_y = best_checkpoint_points[i, :2]
+        if dist < 1:  # Check distance condition
+            if not covered_checkpoints or (
+                    covered_checkpoints[-1][0] != best_x or covered_checkpoints[-1][1] != best_y):
+                covered_checkpoints.append((best_x, best_y))
+
+    # min_dists = []
+    # best_checkpoint_points_x = []
+    # best_checkpoint_points_y = []
+    # covered_checkpoints = []
+    # for error_counter, checkpoint in enumerate(checkpoints_tuples):
+    #     min_dist = 100
+    #     for x, perfect_checkpoint in enumerate(map_waypoints_tuples):
+    #         point_1 = np.array([checkpoint[0], checkpoint[1]])
+    #         point_2 = np.array([perfect_checkpoint[0], perfect_checkpoint[1]])
+    #         dist = (point_2 - point_1) ** 2
+    #         dist = np.sum(dist, axis=0)
+    #         dist = np.sqrt(dist)
+    #         if dist < min_dist:
+    #             min_dist = dist
+    #             best_checkpoint = x
+    #             best_checkpoint_point_x = point_2[0]
+    #             best_checkpoint_point_y = point_2[1]
+    #     best_checkpoint_points_x.append(best_checkpoint_point_x)
+    #     best_checkpoint_points_y.append(best_checkpoint_point_y)
+    #     if min_dist < 100:
+    #         min_dists.append(min_dist)
+    #         if len(covered_checkpoints) == 0 or (
+    #                 len(covered_checkpoints) > 0 and covered_checkpoints[len(covered_checkpoints) - 1][
+    #             0] != best_checkpoint_point_x and covered_checkpoints[len(covered_checkpoints) - 1][
+    #                     1] != best_checkpoint_point_y):
+    #             if min_dist < 1:
+    #                 covered_checkpoints.append((best_checkpoint_point_x, best_checkpoint_point_y))
 
     experiment_metrics['effective_completed_distance'] = len(covered_checkpoints)*0.5
-    experiment_metrics['position_deviation_mean'] = sum(min_dists) / len(min_dists)  
+    experiment_metrics['position_deviation_mean'] = sum(min_dists) / len(min_dists)
     experiment_metrics['position_deviation_total_err'] = sum(min_dists)
     experiment_metrics['position_deviation_mean_per_km'] = experiment_metrics['position_deviation_mean'] / (experiment_metrics['effective_completed_distance']/1000)
     starting_point_map = (checkpoints_tuples_x[0], checkpoints_tuples_y[0])
@@ -356,18 +443,20 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
         experiment_metrics['collisions_per_km'] = 0
     if experiment_metrics['lane_invasions'] > 0:
         experiment_metrics['lane_invasions_per_km'] = experiment_metrics['lane_invasions'] / (experiment_metrics['effective_completed_distance']/1000)
-    else: 
+    else:
         experiment_metrics['lane_invasions_per_km'] = 0
     experiment_metrics['suddenness_distance_control_command_per_km'] = experiment_metrics['suddenness_distance_control_commands'] / (experiment_metrics['effective_completed_distance']/1000)
     experiment_metrics['suddenness_distance_throttle_per_km'] = experiment_metrics['suddenness_distance_throttle'] / (experiment_metrics['effective_completed_distance']/1000)
     experiment_metrics['suddenness_distance_steer_per_km'] = experiment_metrics['suddenness_distance_steer'] / (experiment_metrics['effective_completed_distance']/1000)
     experiment_metrics['suddenness_distance_brake_command_per_km'] = experiment_metrics['suddenness_distance_brake_command'] / (experiment_metrics['effective_completed_distance']/1000)
     experiment_metrics['suddenness_distance_speed_per_km'] = experiment_metrics['suddenness_distance_speed'] / (experiment_metrics['effective_completed_distance']/1000)
-    
-    create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, best_checkpoint_points_x, best_checkpoint_points_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, collision_points, lane_invasion_checkpoints)
+
+    logger.info("creating maps")
+    create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, best_checkpoint_points_x, best_checkpoint_points_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, collision_points, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer)
+    logger.info("created maps")
     return experiment_metrics
 
-def create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, best_checkpoint_points_x, best_checkpoint_points_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, collision_points, lane_invasion_checkpoints):
+def create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, best_checkpoint_points_x, best_checkpoint_points_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, collision_points, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer):
     difference_x = 0
     difference_y = 0
     starting_point_landmark = 0
@@ -390,7 +479,7 @@ def create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_
     ax = fig.add_subplot()
     colors=["#00FF00", "#FF0000", "#000000"]
     ax.scatter(map_waypoints_tuples_x, map_waypoints_tuples_y, s=10, c='b', marker="s", label='Map waypoints')
-    ax.scatter(best_checkpoint_points_x, best_checkpoint_points_y, s=10, c='g', marker="o", label='Map waypoints for position deviation')
+    # ax.scatter(best_checkpoint_points_x, best_checkpoint_points_y, s=10, c='g', marker="o", label='Map waypoints for position deviation')
     plot = ax.scatter(checkpoints_tuples_x, checkpoints_tuples_y, s=10, c=checkpoints_speeds, cmap='hot_r', marker="o", label='Experiment waypoints', vmin=0, vmax=(experiment_metrics['max_speed'] if experiment_metrics['max_speed']>30 else 30))
     ax.scatter(checkpoints_tuples_x[0], checkpoints_tuples_y[0], s=200, marker="o", color=colors[0], label='Experiment starting point')
     ax.scatter(checkpoints_tuples_x[starting_point_landmark], checkpoints_tuples_y[starting_point_landmark], s=100, marker="o", color=colors[2])
@@ -398,7 +487,7 @@ def create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_
     ax.scatter(checkpoints_tuples_x[finish_point_landmark], checkpoints_tuples_y[finish_point_landmark], s=100, marker="o", color=colors[2])
     fig.colorbar(plot, shrink=0.5)
     plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left', prop={'size': 20})
-    
+
     full_text = ''
     for key, value in experiment_metrics.items():
         print(key, value)
@@ -410,9 +499,24 @@ def create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_
     plt.title(experiment_metrics['experiment_model'], fontsize=16)
     fig.savefig(experiment_metrics_filename + '.png', dpi=fig.dpi)
 
+    logger.info("creating braking map")
+    create_brake_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y,
+                     checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark,
+                     finish_point_landmark, collision_points, brake_checkpoints)
+    create_rewards_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y,
+                     checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark,
+                     finish_point_landmark, collision_points, brake_checkpoints, min_dists, checkpoints_steer)
+    create_steer_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y,
+                     checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark,
+                     finish_point_landmark, collision_points, brake_checkpoints, min_dists, checkpoints_steer)
+    create_dist_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y,
+                     checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark,
+                     finish_point_landmark, collision_points, brake_checkpoints, min_dists, checkpoints_steer)
     if experiment_metrics['collisions'] > 0:
+        logger.info("creating collisions map")
         create_collisions_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, collision_points)
     if experiment_metrics['lane_invasions'] > 0:
+        logger.info("creating lane invasions map")
         create_lane_invasions_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints)
 
 
@@ -456,6 +560,136 @@ def create_collisions_map(experiment_metrics, experiment_metrics_filename, map_w
     plt.title(experiment_metrics['experiment_model'] + ' Collisions', fontsize=16)
     fig.savefig(experiment_metrics_filename + '_collisions.png', dpi=fig.dpi)
 
+
+def create_dist_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer):
+    brake_checkpoints_tuples_x = []
+    brake_checkpoints_tuples_y = []
+
+    x = len(checkpoints_tuples_y) - len(brake_checkpoints)
+
+    if x > 0:
+        checkpoints_tuples_x = checkpoints_tuples_x[:-x]
+        checkpoints_tuples_y = checkpoints_tuples_y[:-x]
+    elif x < 0:
+        min_dists = min_dists[:-x]
+
+    fig = plt.figure(figsize=(30,30))
+    ax = fig.add_subplot()
+    colors=["#00FF00", "#FF0000", "#000000"]
+    ax.scatter(map_waypoints_tuples_x, map_waypoints_tuples_y, s=10, c='#ADD8E6', marker="s", label='Map waypoints')
+    plot = ax.scatter(checkpoints_tuples_x, checkpoints_tuples_y, s=10, c=min_dists, cmap='hot_r', marker="o", label='Experiment waypoints', vmin=-0.2, vmax=0.2)
+    ax.scatter(checkpoints_tuples_x[0], checkpoints_tuples_y[0], s=200, marker="o", color=colors[0], label='Experiment starting point')
+    ax.scatter(checkpoints_tuples_x[starting_point_landmark], checkpoints_tuples_y[starting_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(checkpoints_tuples_x[len(checkpoints_tuples_x)-1], checkpoints_tuples_y[len(checkpoints_tuples_x)-1], s=200, marker="o", color=colors[1], label='Experiment finish point')
+    ax.scatter(checkpoints_tuples_x[finish_point_landmark], checkpoints_tuples_y[finish_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(brake_checkpoints_tuples_x, brake_checkpoints_tuples_y, s=200, marker="o", color='y', label='Steer')
+
+    fig.colorbar(plot, shrink=0.5)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left', prop={'size': 20})
+    plt.grid(True)
+    plt.title(experiment_metrics['experiment_model'] + ' Dists', fontsize=16)
+    fig.savefig(experiment_metrics_filename + '_dists.png', dpi=fig.dpi)
+
+
+def create_steer_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer):
+    brake_checkpoints_tuples_x = []
+    brake_checkpoints_tuples_y = []
+
+    x = len(checkpoints_tuples_y) - len(brake_checkpoints)
+
+    if x > 0:
+        checkpoints_tuples_x = checkpoints_tuples_x[:-x]
+        checkpoints_tuples_y = checkpoints_tuples_y[:-x]
+    elif x < 0:
+        checkpoints_steer = checkpoints_steer[:-x]
+
+    fig = plt.figure(figsize=(30,30))
+    ax = fig.add_subplot()
+    colors=["#00FF00", "#FF0000", "#000000"]
+    ax.scatter(map_waypoints_tuples_x, map_waypoints_tuples_y, s=10, c='#ADD8E6', marker="s", label='Map waypoints')
+    plot = ax.scatter(checkpoints_tuples_x, checkpoints_tuples_y, s=10, c=checkpoints_steer, cmap='hot_r', marker="o", label='Experiment waypoints', vmin=-0.2, vmax=0.2)
+    ax.scatter(checkpoints_tuples_x[0], checkpoints_tuples_y[0], s=200, marker="o", color=colors[0], label='Experiment starting point')
+    ax.scatter(checkpoints_tuples_x[starting_point_landmark], checkpoints_tuples_y[starting_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(checkpoints_tuples_x[len(checkpoints_tuples_x)-1], checkpoints_tuples_y[len(checkpoints_tuples_x)-1], s=200, marker="o", color=colors[1], label='Experiment finish point')
+    ax.scatter(checkpoints_tuples_x[finish_point_landmark], checkpoints_tuples_y[finish_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(brake_checkpoints_tuples_x, brake_checkpoints_tuples_y, s=200, marker="o", color='y', label='Steer')
+
+    fig.colorbar(plot, shrink=0.5)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left', prop={'size': 20})
+    plt.grid(True)
+    plt.title(experiment_metrics['experiment_model'] + ' Steer', fontsize=16)
+    fig.savefig(experiment_metrics_filename + '_steer.png', dpi=fig.dpi)
+
+def create_rewards_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer):
+    brake_checkpoints_tuples_x = []
+    brake_checkpoints_tuples_y = []
+
+    x = len(checkpoints_tuples_y) - len(brake_checkpoints)
+
+    if x > 0:
+        checkpoints_tuples_x = checkpoints_tuples_x[:-x]
+        checkpoints_tuples_y = checkpoints_tuples_y[:-x]
+    elif x < 0:
+        checkpoints_speeds = checkpoints_speeds[:-x]
+        min_dists = min_dists[:-x]
+        checkpoints_steer = checkpoints_steer[:-x]
+
+    d_rewards = np.power(1 - min_dists, 1)  # Element-wise power operation
+
+    checkpoints_speeds = np.array(checkpoints_speeds)  # Ensure this is a NumPy array
+    d_rewards = np.array(d_rewards)  # Ensure d_rewards is a NumPy array
+    checkpoints_steer = np.array(checkpoints_steer)
+
+    # Calculate rewards
+    rewards = np.log(checkpoints_speeds) * np.power(d_rewards, (checkpoints_speeds / 5) + 1)
+    # rewards -= 5 * checkpoints_steer
+
+    fig = plt.figure(figsize=(30,30))
+    ax = fig.add_subplot()
+    colors=["#00FF00", "#FF0000", "#000000"]
+    ax.scatter(map_waypoints_tuples_x, map_waypoints_tuples_y, s=10, c='#ADD8E6', marker="s", label='Map waypoints')
+    plot = ax.scatter(checkpoints_tuples_x, checkpoints_tuples_y, s=10, c=rewards, cmap='hot_r', marker="o", label='Experiment waypoints', vmin=0, vmax=3)
+    ax.scatter(checkpoints_tuples_x[0], checkpoints_tuples_y[0], s=200, marker="o", color=colors[0], label='Experiment starting point')
+    ax.scatter(checkpoints_tuples_x[starting_point_landmark], checkpoints_tuples_y[starting_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(checkpoints_tuples_x[len(checkpoints_tuples_x)-1], checkpoints_tuples_y[len(checkpoints_tuples_x)-1], s=200, marker="o", color=colors[1], label='Experiment finish point')
+    ax.scatter(checkpoints_tuples_x[finish_point_landmark], checkpoints_tuples_y[finish_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(brake_checkpoints_tuples_x, brake_checkpoints_tuples_y, s=200, marker="o", color='y', label='Rewards')
+
+    fig.colorbar(plot, shrink=0.5)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left', prop={'size': 20})
+    plt.grid(True)
+    plt.title(experiment_metrics['experiment_model'] + ' Rewards', fontsize=16)
+    fig.savefig(experiment_metrics_filename + '_rewards.png', dpi=fig.dpi)
+
+def create_brake_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints, brake_checkpoints):
+    brake_checkpoints_tuples_x = []
+    brake_checkpoints_tuples_y = []
+
+    x = len(checkpoints_tuples_y) - len(brake_checkpoints)
+
+    if x > 0:
+        checkpoints_tuples_x = checkpoints_tuples_x[:-x]
+        checkpoints_tuples_y = checkpoints_tuples_y[:-x]
+    elif x < 0:
+        brake_checkpoints = brake_checkpoints[:-x]
+
+
+    fig = plt.figure(figsize=(30,30))
+    ax = fig.add_subplot()
+    colors=["#00FF00", "#FF0000", "#000000"]
+    ax.scatter(map_waypoints_tuples_x, map_waypoints_tuples_y, s=10, c='#ADD8E6', marker="s", label='Map waypoints')
+    plot = ax.scatter(checkpoints_tuples_x, checkpoints_tuples_y, s=10, c=brake_checkpoints, cmap='hot_r', marker="o", label='Experiment waypoints', vmin=-1, vmax=1)
+    ax.scatter(checkpoints_tuples_x[0], checkpoints_tuples_y[0], s=200, marker="o", color=colors[0], label='Experiment starting point')
+    ax.scatter(checkpoints_tuples_x[starting_point_landmark], checkpoints_tuples_y[starting_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(checkpoints_tuples_x[len(checkpoints_tuples_x)-1], checkpoints_tuples_y[len(checkpoints_tuples_x)-1], s=200, marker="o", color=colors[1], label='Experiment finish point')
+    ax.scatter(checkpoints_tuples_x[finish_point_landmark], checkpoints_tuples_y[finish_point_landmark], s=100, marker="o", color=colors[2])
+    ax.scatter(brake_checkpoints_tuples_x, brake_checkpoints_tuples_y, s=200, marker="o", color='y', label='action')
+
+    fig.colorbar(plot, shrink=0.5)
+    plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left', prop={'size': 20})
+    plt.grid(True)
+    plt.title(experiment_metrics['experiment_model'] + ' Action', fontsize=16)
+    fig.savefig(experiment_metrics_filename + '_speed_action.png', dpi=fig.dpi)
 
 def create_lane_invasions_map(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, starting_point_landmark, finish_point_landmark, lane_invasion_checkpoints):
     lane_invasion_checkpoints_tuples_x = []
@@ -519,7 +753,7 @@ def get_aggregated_experiments_list(experiments_starting_time):
             shutil.rmtree(folder[0])
 
     result = pd.concat(dataframes)
-    result.index = result['timestamp'].values.tolist()
+    result.index = result['experiment_model'].values.tolist()
     result.loc[result['collisions'] > 0, 'position_deviation_mean'] = float("nan")
     result.loc[result['collisions'] > 0, 'effective_completed_distance'] = float("nan")
     result.loc[result['collisions'] > 0, 'suddenness_distance_control_commands'] = float("nan")
@@ -541,13 +775,14 @@ def get_aggregated_experiments_list(experiments_starting_time):
 
 def get_maps_colors():
     maps_colors = {
-        'Carla/Maps/Town01': 'red', 
-        'Carla/Maps/Town02': 'green', 
-        'Carla/Maps/Town03': 'blue', 
-        'Carla/Maps/Town04': 'grey', 
-        'Carla/Maps/Town05': 'black', 
-        'Carla/Maps/Town06': 'pink', 
-        'Carla/Maps/Town07': 'orange', 
+        'Carla/Maps/Town01': 'red',
+        'Carla/Maps/Town02': 'green',
+        'Carla/Maps/Town03': 'blue',
+        'Carla/Maps/Town04': 'grey',
+        'Carla/Maps/Town05': 'black',
+        'Carla/Maps/Town06': 'pink',
+        'Carla/Maps/Town07': 'orange',
+        'Carla/Maps/Town10HD': 'yellow',
     }
     return maps_colors
 
@@ -559,7 +794,8 @@ def get_color_handles():
     black_patch = mpatches.Patch(color='black',  label='Map05')
     pink_patch = mpatches.Patch(color='pink',  label='Map06')
     orange_patch = mpatches.Patch(color='orange',  label='Map07')
-    color_handles = [red_patch, green_patch, blue_patch, grey_patch, black_patch, pink_patch, orange_patch]
+    yellow_patch = mpatches.Patch(color='yellow',  label='Map10HD')
+    color_handles = [red_patch, green_patch, blue_patch, grey_patch, black_patch, pink_patch, orange_patch, yellow_patch]
 
     return color_handles
 

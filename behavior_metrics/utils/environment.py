@@ -73,10 +73,10 @@ def launch_env(launch_file, random_spawn_point=False, carla_simulator=False, con
                 tree = ET.parse(ROOT_PATH + '/' + launch_file)
                 root = tree.getroot()
                 quality = root.find(".//*[@name=\"quality\"]")
-                if quality == None:
-                    subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen"], stdout=out, stderr=err)
-                elif quality.attrib['default'] == 'Low':
-                    subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)                
+                # if quality == None:
+                #     subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen"], stdout=out, stderr=err)
+                # elif quality.attrib['default'] == 'Low':
+                #     subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)
                 #subprocess.Popen(["/home/jderobot/Documents/Projects/carla_simulator_0_9_13/CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)
             logger.info("SimulatorEnv: launching simulator server.")
             time.sleep(5)
@@ -120,19 +120,19 @@ def close_ros_and_simulators(close_ros_resources=True):
         except subprocess.CalledProcessError as ce:
             logger.error("SimulatorEnv: exception raised executing killall command for gzserver {}".format(ce))
 
-    if ps_output.count('CarlaUE4.sh') > 0:
-        try:
-            subprocess.check_call(["killall", "-9", "CarlaUE4.sh"])
-            logger.debug("SimulatorEnv: CARLA server killed.")
-        except subprocess.CalledProcessError as ce:
-            logger.error("SimulatorEnv: exception raised executing killall command for CARLA server {}".format(ce))
+    # if ps_output.count('CarlaUE4.sh') > 0:
+    #     try:
+    #         subprocess.check_call(["killall", "-9", "CarlaUE4.sh"])
+    #         logger.debug("SimulatorEnv: CARLA server killed.")
+    #     except subprocess.CalledProcessError as ce:
+    #         logger.error("SimulatorEnv: exception raised executing killall command for CARLA server {}".format(ce))
 
-    if ps_output.count('CarlaUE4-Linux-Shipping') > 0:
-        try:
-            subprocess.check_call(["killall", "-9", "CarlaUE4-Linux-Shipping"])
-            logger.debug("SimulatorEnv: CarlaUE4-Linux-Shipping killed.")
-        except subprocess.CalledProcessError as ce:
-            logger.error("SimulatorEnv: exception raised executing killall command for CarlaUE4-Linux-Shipping {}".format(ce))
+    # if ps_output.count('CarlaUE4-Linux-Shipping') > 0:
+    #     try:
+    #         subprocess.check_call(["killall", "-9", "CarlaUE4-Linux-Shipping"])
+    #         logger.debug("SimulatorEnv: CarlaUE4-Linux-Shipping killed.")
+    #     except subprocess.CalledProcessError as ce:
+    #         logger.error("SimulatorEnv: exception raised executing killall command for CarlaUE4-Linux-Shipping {}".format(ce))
 
     if ps_output.count('rosout') > 0 and close_ros_resources:
         try:

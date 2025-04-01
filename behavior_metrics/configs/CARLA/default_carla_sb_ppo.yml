@@ -18,10 +18,6 @@ Behaviors:
                 Pose3D_0:
                     Name: 'pose3d_0'
                     Topic: '/carla/ego_vehicle/odometry'
-            BirdEyeView:
-                BirdEyeView_0:
-                    Name: 'bird_eye_view_0'
-                    Topic: ''
             Speedometer:
                 Speedometer_0:
                     Name: 'speedometer_0'
@@ -36,47 +32,27 @@ Behaviors:
                     Name: 'motors_0'
                     Topic: '/carla/ego_vehicle/vehicle_control_cmd'
                     MaxV: 3
-                    MaxW: 0.3
-                    
-        BrainPath: [
-            'brains/CARLA/brain_carla_sb_sac.py',
-#            'brains/CARLA/brain_carla_sb_ddpg.py',
-#            'brains/CARLA/brain_carla_sb_ppo.py',
-            ]
-        PilotTimeCycle: 50
-        AsyncMode: True
+                    MaxW: 0.5
+        BrainPath: 'brains/CARLA/brain_carla_sb_ppo.py'
+        PilotTimeCycle: 50 # Turn up to reduce number of control decisions
+        AsyncMode: True # Set to False to control simulator time
         Parameters:
-            Model: ["DDPG"]
-#            Model: ["sac", "ddpg", "ppo"]
-#            Model: ["any", "any"]
-#            Model: ["any"]
+            Model: ''
             ImageCropped: True
-            ImageSize: [ 100,50 ]
+            ImageSize: [ 200,66 ]
             ImageNormalized: True
             PredictionsNormalized: True
             GPU: True
-            UseOptimized: True
+            UseOptimized: False
             ImageTranform: ''
         Type: 'CARLA'
-    Experiment:
-        Name: "Experiment name"
-        Description: "Experiment description"
-        UseWorldTimeouts: False
-#        Timeout: [1, 1, 1] # time to poll if experiment is done (1 for each world)
-#        MaxWaits: [450, 450, 450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
-        Timeout: [1] # time to poll if experiment is done (1 for each world)
-        MaxWaits: [450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
-        Repetitions: 1
     Simulation:
-        World: [
-#             configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch,
-#             configs/CARLA/CARLA_launch_files/town_05_clockwise.launch,
-             configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
-#              configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
-#            configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
-            ]
+        World: configs/CARLA/CARLA_launch_files/town_04_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
         RandomSpawnPoint: False
-        SpawnPoints: []
     Dataset:
         In: '/tmp/my_bag.bag'
         Out: ''

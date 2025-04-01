@@ -14,6 +14,8 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
 import threading
 import time
+import traceback
+
 import rospy
 import subprocess
 import os
@@ -57,6 +59,7 @@ class PilotCarla(threading.Thread):
             controller {utils.controller.Controller} -- Controller instance of the MVC of the application
         """
 
+        self.done = False
         self.controller = controller
         self.controller.set_pilot(self)
         self.configuration = configuration
@@ -101,6 +104,7 @@ class PilotCarla(threading.Thread):
         self.stop_interfaces()
         self.actuators = Actuators(self.configuration.actuators)
         self.sensors = Sensors(self.configuration.sensors)
+        # self.controller.camera.listen(self.controller.process_camera_image)
         if self.experiment_model:
             self.brains = Brains(self.sensors, self.actuators, self.brain_path, self.controller,
                                  self.experiment_model, self.configuration.brain_kwargs)
@@ -131,7 +135,8 @@ class PilotCarla(threading.Thread):
         control_pub.publish(control_command)
 
         self.waypoint_publisher = None
-        while not self.kill_event.is_set():
+        self.done = False
+        while not self.kill_event.is_set() and not self.done:
             if not self.stop_event.is_set():
                 if self.waypoint_publisher is None and self.waypoint_publisher_path is not None:
                     self.waypoint_publisher = subprocess.Popen(["roslaunch", ROOT_PATH + '/' + self.waypoint_publisher_path])
@@ -147,13 +152,16 @@ class PilotCarla(threading.Thread):
                 start_time_ros = self.ros_clock_time
                 self.execution_completed = False
                 try:
-                    self.brains.active_brain.execute()
+                    self.done = self.brains.active_brain.execute()
                 except AttributeError as e:
                     logger.warning('No Brain selected')
                     logger.error(e)
                 except Exception as ex:
                     logger.warning(type(ex).__name__)
                     logger.warning(ex)
+                    # Log the stack trace
+                    logger.warning("Stack trace:")
+                    logger.warning(traceback.format_exc())
                     logger.warning('ERROR Pilot Carla!')
                     self.stop()
                     self.kill()

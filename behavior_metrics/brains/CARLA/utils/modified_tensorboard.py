@@ -61,10 +61,17 @@ class ModifiedTensorBoard(TensorBoard):
 
     def update_times(self, time, section):
         self._write_times(time, section)
+
     def update_actions(self, actions, index):
         with self.writer.as_default():
             tf.summary.histogram("actions_v", actions[0], step=index)
             tf.summary.histogram("actions_w", actions[1], step=index)
+            self.writer.flush()
+
+    def update_state(self, state, index):
+        with self.writer.as_default():
+            tf.summary.histogram("distances", state["distances"], step=index)
+            tf.summary.histogram("speed", state["speed"], step=index)
             self.writer.flush()
 
     def update_weights(self, weights_paramaters, index):

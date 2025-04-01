@@ -203,7 +203,7 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
         {
             'metric': 'completed_distance',
             'title': 'Total distance per experiment'
-        }, 
+        },
         {
             'metric': 'average_speed',
             'title': 'Average speed per experiment'

@@ -137,8 +137,14 @@ def main():
         experiment_timeout = CARLA_TOWNS_TIMEOUTS[controller.carla_map.name]
     else:
         experiment_timeout = app_configuration.experiment_timeouts[world_counter]
+    max_waits = app_configuration.max_waits[world_counter]
 
-    rospy.sleep(experiment_timeout)
+    waits = 0
+
+    while not pilot.done and waits <= max_waits:
+        rospy.sleep(experiment_timeout)
+        waits += 1
+
     controller.stop_recording_metrics()
     controller.pilot.stop()
     controller.stop_pilot()
