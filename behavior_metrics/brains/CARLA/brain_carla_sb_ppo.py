@@ -10,14 +10,7 @@ from PIL import Image
 from sklearn.linear_model import LinearRegression
 import carla
 
-from brains.CARLA.utils.ground_truth.camera_geometry import (
-    get_intrinsic_matrix,
-    project_polyline,
-    check_inside_image,
-    create_lane_lines,
-    get_matrix_global,
-    CameraGeometry,
-)
+
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -141,21 +134,27 @@ class Brain:
             'filename': 'brains/CARLA/config/config_inference_followlane_sb_ppo_f1_carla.yaml'
         }
 
+
         f = open(args['filename'], "r")
         read_file = f.read()
 
         config_file = yaml.load(read_file, Loader=yaml.FullLoader)
-
         inference_params = {
             "settings": self.get_settings(config_file),
             "inference": self.get_inference(config_file, args['algorithm']),
         }
 
         self.x_row = self.get_states_rows(config_file)
+        inference_distances = {
+            "Carla/Maps/Town10HD": 2200,
+            "Carla/Maps/Town06": 2500,
+            "Carla/Maps/Town04": 3000
+        }
+
 
         params = InferenceExecutorValidator(**inference_params)
         inference_file = params.inference["params"]["inference_tf_model_name"]
-        self.inference_distance = params.settings["params"]["inference_distance"]
+        self.inference_distance = inference_distances[self.map.name]
 
         self.lane_detector = LaneDetector(self.car, self.map, self.x_row)
 

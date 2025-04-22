@@ -39,7 +39,7 @@ def carla_vec_to_np_array(vec):
                      vec.z])
 
 
-def get_matrix_global (vehicle, trafo_matrix_vehicle_to_cam):
+def get_matrix_global (vehicle, trafo_matrix_vehicle_to_cam, opposite=False):
 
     # draw lane boundaries as augmented reality
     trafo_matrix_world_to_vehicle = np.array(
@@ -48,16 +48,34 @@ def get_matrix_global (vehicle, trafo_matrix_vehicle_to_cam):
     trafo_matrix_global_to_camera = (
         trafo_matrix_vehicle_to_cam @ trafo_matrix_world_to_vehicle
     )
-    mat_swap_axes = np.array(
-        [[0, 1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
-    )
+    if opposite:
+        mat_swap_axes = np.array(
+            [[0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
+        )
+    else:
+        mat_swap_axes = np.array(
+            [[0, 1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1]]
+        )
+
     trafo_matrix_global_to_camera = (
         mat_swap_axes @ trafo_matrix_global_to_camera
     )
 
     return trafo_matrix_global_to_camera
 
-def create_lane_lines(waypoint, vehicle, exclude_junctions=True, only_turns=True):
+
+def get_next_waypoint(opposite, waypoint, meters):
+    if opposite:
+        next_waypoints = waypoint.previous(meters)
+    else:
+        next_waypoints = waypoint.next(meters)
+    if len(next_waypoints)>1:
+        return [next_waypoints[0]]
+    else:
+        return next_waypoints
+
+
+def create_lane_lines(waypoint, vehicle, exclude_junctions=True, opposite=False, only_turns=True):
     
     center_list, left_boundary, right_boundary = [], [], []
 
@@ -78,12 +96,17 @@ def create_lane_lines(waypoint, vehicle, exclude_junctions=True, only_turns=True
             pass
             #print("junction on the path")
             #return None, None, None, None
-        next_waypoints = waypoint.next(1.0)
-        # if there is a branch on the path, return None
-        if len(next_waypoints) != 1:
-            pass
-            #print("Branch on the path")
-            #return None, None, None, None
+        get_waypoints_attempts = 1
+        next_waypoints = get_next_waypoint(opposite, waypoint, get_waypoints_attempts)
+        while len(next_waypoints) != 1:
+            get_waypoints_attempts+=1
+            next_waypoints = get_next_waypoint(opposite, waypoint, get_waypoints_attempts)
+
+        # # if there is a branch on the path, return None
+        # if len(next_waypoints) != 1:
+        #     # pass
+        #     print("Branch on the path")
+        #     return None, None, None, None
 
         waypoint = next_waypoints[0]
         center = carla_vec_to_np_array(waypoint.transform.location)

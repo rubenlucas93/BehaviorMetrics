@@ -123,7 +123,12 @@ class Brain:
 
         params = InferenceExecutorValidator(**inference_params)
         inference_file = params.inference["params"]["inference_tf_model_name"]
-        self.inference_distance = params.settings["params"]["inference_distance"]
+        inference_distances = {
+            "Carla/Maps/Town10HD": 2200,
+            "Carla/Maps/Town06": 2500,
+            "Carla/Maps/Town04": 3000
+        }
+        self.inference_distance = inference_distances[self.map.name]
 
         self.sac_agent = SAC.load(inference_file)
         action_noise = NormalActionNoise(mean=np.zeros(2), sigma=0.0 * np.ones(2))
@@ -216,7 +221,6 @@ class Brain:
         # state.append(speed)
         # state.append(w_angle)
         final_curvature = self.calculate_curvature_from(state)
-
         v = self.car.get_velocity()
         speed = math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2)
         w_angle = self.car.get_control().steer
@@ -260,7 +264,7 @@ class Brain:
         # To calculate distance to center on inference we use the 5 lowest points to reduce curve noise
         # dists = np.mean(state[:7])  # Take 7 elements, apply abs, then mean
         dists = np.mean(state)
-        state = { "speed" : speed, "distances": dists}
+        state = { "speed" : speed, "distances": dists, "curvatures": final_curvature}
 
         self.tensorboard.update_state(state, self.step)
 

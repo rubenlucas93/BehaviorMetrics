@@ -7,16 +7,7 @@ import math
 import numpy as np
 import threading
 import time
-from PIL import Image
-from sklearn.linear_model import LinearRegression
-from brains.CARLA.utils.ground_truth.camera_geometry import (
-    get_intrinsic_matrix,
-    project_polyline,
-    check_inside_image,
-    create_lane_lines,
-    get_matrix_global,
-    CameraGeometry,
-)
+
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -140,7 +131,12 @@ class Brain:
 
         params = InferenceExecutorValidator(**inference_params)
         inference_file = params.inference["params"]["inference_tf_model_name"]
-        self.inference_distance = params.settings["params"]["inference_distance"]
+        inference_distances = {
+            "Carla/Maps/Town10HD": 2200,
+            "Carla/Maps/Town06": 2500,
+            "Carla/Maps/Town04": 3000
+        }
+        self.inference_distance = inference_distances[self.map.name]
 
         self.lane_detector = LaneDetector(self.car, self.map, self.x_row)
 

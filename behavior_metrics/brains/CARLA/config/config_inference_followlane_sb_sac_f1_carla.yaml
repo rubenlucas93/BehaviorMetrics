@@ -7,7 +7,7 @@ settings:
   env: follow_lane # Town01, simple, nurburgring, montreal, curves, simple_laser, manual, autoparking
   agent: auto_carla # auto_carla, autoparkingRL, auto_carla, mountain_car, robot_mesh, cartpole, turtlebot
   actions: continuous # slow, fast
-  states: sp5 #image, sp1 (simplified perception with 1 point), sp3 (simplified perception with 3 points), spn (simplified perception with n points)
+  states: sp10 #image, sp1 (simplified perception with 1 point), sp3 (simplified perception with 3 points), spn (simplified perception with n points)
   rewards: followlane_center # followline_center, followline_center_v_w_linear
   framework: TensorFlow # TensorFlow, Pytorch
   total_episodes: 500000
@@ -21,7 +21,7 @@ settings:
   steps_to_decrease: 15000
   decrease_substraction: 0.005
   decrease_min: 0.005
-  inference_distance: 1400 # 2000 [Town05] 1400 [Town10HD]
+  inference_distance: 1400 # 200 [Town04] 2000 [Town05] 1400 [Town10HD]
   reward_params:
     function: pow
     punish_zig_zag_value: 1
@@ -34,7 +34,8 @@ ros:
 
 inference:
   sac:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/best_checkpoints/sac_bs/town04/2025_02_22_perfect_one_with_5_points_5_extra.zip
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/best_checkpoints/sac_bs/town04/2025_04_04_sp10+5-model.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/sac_bs/town03/2025_02_24_town03_best_model_SP10_5_extra.zip
 
 algorithm:
   sac:

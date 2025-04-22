@@ -72,6 +72,7 @@ class ModifiedTensorBoard(TensorBoard):
         with self.writer.as_default():
             tf.summary.histogram("distances", state["distances"], step=index)
             tf.summary.histogram("speed", state["speed"], step=index)
+            tf.summary.histogram("curvatures", state["curvatures"], step=index)
             self.writer.flush()
 
     def update_weights(self, weights_paramaters, index):

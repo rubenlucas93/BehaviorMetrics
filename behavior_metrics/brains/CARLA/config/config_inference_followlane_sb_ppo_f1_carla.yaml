@@ -35,7 +35,8 @@ ros:
 
 inference:
   ppo:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/best_checkpoints/ppo_bs/town04/2025_03_20_best_model_setup_10+5.zip
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/best_checkpoints/ppo_bs/mixto/town03Andtown04_simple_reward_10+5.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/ppo_bs/town03/20250409_reward_simple.zip
 
 algorithm:
   ppo:
@@ -74,7 +75,7 @@ states:
     2: w_angle
     3: self.lidar_front_distance/100 # Can be replaced by max(0, 1-(abs(distance_error[0])*5)) or curvature
   sp10:
-    0: [270, 275, 285, 295, 320, 360, 390, 420, 450, 480]
+    0: [275, 280, 285, 295, 320, 360, 390, 420, 450, 480]
   spn:
     0: [10]
 

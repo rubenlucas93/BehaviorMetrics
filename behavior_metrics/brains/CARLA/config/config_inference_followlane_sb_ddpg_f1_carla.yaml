@@ -21,7 +21,7 @@ settings:
   steps_to_decrease: 15000
   decrease_substraction: 0.005
   decrease_min: 0.005
-  inference_distance: 1400 # 2000 [Town05] 1400 [Town06]
+  inference_distance: 1300 # 2000 [Town05] 1400 [Town06]
   reward_params:
     function: pow
     punish_zig_zag_value: 1
@@ -34,7 +34,8 @@ ros:
 
 inference:
   ddpg:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/RL_Unibotics/RL-Studio/rl_studio/best_checkpoints/ddpg_bs/town04/2025_02_10-perfect-best_model.zip
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/ddpg_bs/town04/2025_04_07_model_1820000_steps_10+5_reward_pow_curves.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/ddpg_bs/town03/20250406_best_model_top.zip
 algorithm:
   ddpg:
     gamma: 0.9

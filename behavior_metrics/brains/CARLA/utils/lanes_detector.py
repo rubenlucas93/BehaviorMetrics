@@ -217,7 +217,9 @@ class LaneDetector():
                 lane_type=carla.LaneType.Driving,
             )
 
-            center_list, left_boundary, right_boundary, type_lane = create_lane_lines(waypoint, self.car)
+            _, _, alignment = self.get_lane_position(self.car, self.map)
+            opposite = alignment < 0.5
+            center_list, left_boundary, right_boundary, type_lane = create_lane_lines(waypoint, self.car, opposite=opposite)
 
             projected_left_boundary = project_polyline(
                 left_boundary, trafo_matrix_global_to_camera, self.K).astype(np.int32)
@@ -249,6 +251,58 @@ class LaneDetector():
 
         return ll_segment
 
+    def get_lane_position(self, vehicle: carla.Vehicle, map: carla.Map):
+        """
+        Determines the vehicle's position relative to the lane.
+
+        Returns:
+            A dictionary containing:
+            - lane_side: "left", "right", or "center"
+            - lane_offset: Distance from the lane center (positive: left, negative: right)
+            - lane_alignment: Alignment of vehicle and lane directions (0: aligned, -1: opposite)
+        """
+
+        waypoint = map.get_waypoint(
+            vehicle.get_transform().location, project_to_road=True,
+            lane_type=carla.LaneType.Driving
+        )
+
+        # Vehicle's forward vector
+        vehicle_forward = vehicle.get_transform().get_forward_vector()
+        vehicle_forward_np = np.array([vehicle_forward.x, vehicle_forward.y])
+
+        # Lane's forward vector
+        waypoint_forward = waypoint.transform.get_forward_vector()
+        waypoint_forward_np = np.array([waypoint_forward.x, waypoint_forward.y])
+
+        # Vector from waypoint to vehicle
+        vehicle_location = vehicle.get_transform().location
+        waypoint_location = waypoint.transform.location
+        waypoint_to_vehicle = carla.Location(
+            vehicle_location.x - waypoint_location.x,
+            vehicle_location.y - waypoint_location.y,
+            vehicle_location.z - waypoint_location.z
+        )
+        waypoint_to_vehicle_np = np.array([waypoint_to_vehicle.x, waypoint_to_vehicle.y])
+
+        # 1. Lane Side (Left/Right)
+        cross_product = np.cross(vehicle_forward_np, waypoint_forward_np)
+        lane_side = "center"
+        if cross_product > 0.1:
+            lane_side = "left"
+        elif cross_product < -0.1:
+            lane_side = "right"
+
+        # 2. Lane Offset (Distance to Center)
+        # Project waypoint_to_vehicle onto a vector perpendicular to lane_forward
+        lane_right_np = np.array([-waypoint_forward_np[1], waypoint_forward_np[0]])  # 90-degree rotation
+        lane_offset = np.dot(waypoint_to_vehicle_np, lane_right_np)
+        lane_offset /= np.linalg.norm(lane_right_np)
+
+        # 3. Lane Alignment (Forward/Backward)
+        lane_alignment = np.dot(vehicle_forward_np, waypoint_forward_np)
+
+        return lane_side, lane_offset, lane_alignment
 
     def draw_line_through_points(self, points, image):
         # Convert the points list to a format compatible with OpenCV (a numpy array)

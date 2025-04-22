@@ -40,14 +40,13 @@ Behaviors:
                     
         BrainPath: [
             'brains/CARLA/brain_carla_sb_sac.py',
-#            'brains/CARLA/brain_carla_sb_ddpg.py',
-#            'brains/CARLA/brain_carla_sb_ppo.py',
+            'brains/CARLA/brain_carla_sb_ddpg.py',
+            'brains/CARLA/brain_carla_sb_ppo.py',
             ]
         PilotTimeCycle: 50
         AsyncMode: True
         Parameters:
-            Model: ["DDPG"]
-#            Model: ["sac", "ddpg", "ppo"]
+            Model: ["sac", "ddpg", "ppo"]
 #            Model: ["any", "any"]
 #            Model: ["any"]
             ImageCropped: True
@@ -64,16 +63,21 @@ Behaviors:
         UseWorldTimeouts: False
 #        Timeout: [1, 1, 1] # time to poll if experiment is done (1 for each world)
 #        MaxWaits: [450, 450, 450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
-        Timeout: [1] # time to poll if experiment is done (1 for each world)
-        MaxWaits: [450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+#        Timeout: [ 1 ] # time to poll if experiment is done (1 for each world)
+#        MaxWaits: [ 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
+        MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
         Repetitions: 1
     Simulation:
         World: [
 #             configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch,
 #             configs/CARLA/CARLA_launch_files/town_05_clockwise.launch,
+             configs/CARLA/CARLA_launch_files/town_10_anticlockwise_ruben.launch,
              configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
-#              configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
-#            configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
+#            configs/CARLA/CARLA_launch_files/town_06_anticlockwise.launch,
+#            configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_04_anticlockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_04_ruben.launch
             ]
         RandomSpawnPoint: False
         SpawnPoints: []
