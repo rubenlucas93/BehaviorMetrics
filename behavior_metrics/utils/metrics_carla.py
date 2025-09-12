@@ -371,20 +371,22 @@ def find_closest_waypoints(checkpoints_array, map_waypoints_array, chunk_size=10
     return best_indices
 
 
-def get_position_deviation_and_effective_completed_distance(experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename, speedometer, collision_points, lane_invasion_checkpoints, brake_checkpoints, checkpoints_steer, waypoints_info, right):
+def get_position_deviation_and_effective_completed_distance(
+        experiment_metrics, checkpoints, map_waypoints, experiment_metrics_filename,
+        speedometer, collision_points, lane_invasion_checkpoints,
+        brake_checkpoints, checkpoints_steer, waypoints_info, right):
+
     map_waypoints_tuples = []
     map_waypoints_tuples_x = []
     map_waypoints_tuples_y = []
     for waypoint in map_waypoints:
         if (experiment_metrics['carla_map'] == 'Carla/Maps/Town04'
-                or experiment_metrics['carla_map'] == 'Carla/Maps/Town04_Opt'
-        ):
+                or experiment_metrics['carla_map'] == 'Carla/Maps/Town04_Opt'):
             map_waypoints_tuples_x.append(-waypoint.transform.location.x)
             map_waypoints_tuples_y.append(waypoint.transform.location.y)
             map_waypoints_tuples.append((-waypoint.transform.location.x, waypoint.transform.location.y))
-        elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town06'
-                or experiment_metrics['carla_map'] == 'Carla/Maps/Town06_Opt'
-                or experiment_metrics['carla_map'] == 'Carla/Maps/Town10HD'):
+        elif (experiment_metrics['carla_map'] in [
+                'Carla/Maps/Town06', 'Carla/Maps/Town06_Opt', 'Carla/Maps/Town10HD']):
             map_waypoints_tuples_x.append(waypoint.transform.location.x)
             map_waypoints_tuples_y.append(-waypoint.transform.location.y)
             map_waypoints_tuples.append((waypoint.transform.location.x, -waypoint.transform.location.y))
@@ -399,23 +401,19 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
     checkpoints_tuples_y = []
     checkpoints_speeds = []
     for i, point in enumerate(checkpoints):
-        current_checkpoint = np.array([point['pose.pose.position.x'], point['pose.pose.position.y'], speedometer[i]['data']*3.6])
-        if (experiment_metrics['carla_map'] == 'Carla/Maps/Town01'
-                or experiment_metrics['carla_map'] == 'Carla/Maps/Town01_Opt'):
+        current_checkpoint = np.array([point['pose.pose.position.x'],
+                                       point['pose.pose.position.y'],
+                                       speedometer[i]['data']*3.6])
+        if experiment_metrics['carla_map'] in ['Carla/Maps/Town01', 'Carla/Maps/Town01_Opt']:
             checkpoint_x = (max(map_waypoints_tuples_x) + min(map_waypoints_tuples_x))-current_checkpoint[0]
             checkpoint_y = -point['pose.pose.position.y']
-        elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town03'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town07'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town03_Opt'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town07_Opt'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town05'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town05_Opt'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town02'
-              or experiment_metrics['carla_map'] == 'Carla/Maps/Town02_Opt'
-            ):
+        elif experiment_metrics['carla_map'] in [
+                'Carla/Maps/Town03','Carla/Maps/Town07','Carla/Maps/Town03_Opt',
+                'Carla/Maps/Town07_Opt','Carla/Maps/Town05','Carla/Maps/Town05_Opt',
+                'Carla/Maps/Town02','Carla/Maps/Town02_Opt']:
             checkpoint_x = current_checkpoint[0]
             checkpoint_y = -current_checkpoint[1]
-        elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town04' or experiment_metrics['carla_map'] == 'Carla/Maps/Town04_Opt'):
+        elif experiment_metrics['carla_map'] in ['Carla/Maps/Town04','Carla/Maps/Town04_Opt']:
             checkpoint_x = -current_checkpoint[0]
             checkpoint_y = -current_checkpoint[1]
         else:
@@ -428,30 +426,27 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
 
     logger.info("got checkpoints")
 
-    checkpoints_array = np.array(checkpoints_tuples)  # Shape: (num_checkpoints, 2 or 3)
-    checkpoints_array = checkpoints_array[:, :2]
-    map_waypoints_array = np.array(map_waypoints_tuples)  # Shape: (num_waypoints, 2 or 3)
+    checkpoints_array = np.array(checkpoints_tuples)[:, :2]  # (N,2)
+    map_waypoints_array = np.array(map_waypoints_tuples)     # (M,2)
 
     num_checkpoints = checkpoints_array.shape[0]
     num_waypoints = map_waypoints_array.shape[0]
 
-    best_checkpoint_points = np.zeros_like(checkpoints_array)  # Closest waypoints
-    min_dists = np.full(num_checkpoints, np.inf)  # Start with large distances
+    best_checkpoint_points = np.zeros_like(checkpoints_array)
+    min_dists = np.full(num_checkpoints, np.inf)
+    min_dists_with_sign = np.full(num_checkpoints, np.inf)  # <-- NEW signed distances
 
-    # List to store covered checkpoints
     covered_checkpoints = []
 
-    # Process waypoints in chunks
+    # Process in chunks for memory
     for start_idx in range(0, num_waypoints, 10000):
         end_idx = min(start_idx + 10000, num_waypoints)
-        map_chunk = map_waypoints_array[start_idx:end_idx]  # Extract chunk of waypoints
+        map_chunk = map_waypoints_array[start_idx:end_idx]
 
-        # Compute distances for the current chunk
         distances_chunk = np.linalg.norm(
             checkpoints_array[:, np.newaxis, :] - map_chunk[np.newaxis, :, :], axis=2
         )
 
-        # Update the minimum distances and corresponding best checkpoint points
         is_closer = distances_chunk < min_dists[:, np.newaxis]
         min_dists = np.where(is_closer.any(axis=1), distances_chunk.min(axis=1), min_dists)
         best_indices_chunk = is_closer.argmax(axis=1)
@@ -460,78 +455,99 @@ def get_position_deviation_and_effective_completed_distance(experiment_metrics, 
             if closer:
                 best_checkpoint_points[i] = map_chunk[best_indices_chunk[i]]
 
-    # Separate x, y coordinates for final output
+    # Compute signed deviation
+    for i, (cx, cy) in enumerate(checkpoints_array):
+        wx, wy = best_checkpoint_points[i]
+        # Take next waypoint for direction (wrap-around if needed)
+        if i < num_waypoints - 1:
+            wx_next, wy_next = map_waypoints_array[(i+1) % num_waypoints]
+        else:
+            wx_next, wy_next = map_waypoints_array[i-1]
+
+        lane_vec = np.array([wx_next - wx, wy_next - wy])
+        car_vec = np.array([cx - wx, cy - wy])
+
+        # Cross product z-component
+        cross = lane_vec[0]*car_vec[1] - lane_vec[1]*car_vec[0]
+        sign = np.sign(cross)  # +1 = right, -1 = left
+
+        min_dists_with_sign[i] = min_dists[i] * sign
+
     best_checkpoint_points_x = best_checkpoint_points[:, 0].tolist()
     best_checkpoint_points_y = best_checkpoint_points[:, 1].tolist()
 
-    # Filter covered checkpoints
     for i, dist in enumerate(min_dists):
         best_x, best_y = best_checkpoint_points[i, :2]
-        if dist < 1:  # Check distance condition
+        if dist < 1:
             if not covered_checkpoints or (
                     covered_checkpoints[-1][0] != best_x or covered_checkpoints[-1][1] != best_y):
                 covered_checkpoints.append((best_x, best_y))
 
-    # min_dists = []
-    # best_checkpoint_points_x = []
-    # best_checkpoint_points_y = []
-    # covered_checkpoints = []
-    # for error_counter, checkpoint in enumerate(checkpoints_tuples):
-    #     min_dist = 100
-    #     for x, perfect_checkpoint in enumerate(map_waypoints_tuples):
-    #         point_1 = np.array([checkpoint[0], checkpoint[1]])
-    #         point_2 = np.array([perfect_checkpoint[0], perfect_checkpoint[1]])
-    #         dist = (point_2 - point_1) ** 2
-    #         dist = np.sum(dist, axis=0)
-    #         dist = np.sqrt(dist)
-    #         if dist < min_dist:
-    #             min_dist = dist
-    #             best_checkpoint = x
-    #             best_checkpoint_point_x = point_2[0]
-    #             best_checkpoint_point_y = point_2[1]
-    #     best_checkpoint_points_x.append(best_checkpoint_point_x)
-    #     best_checkpoint_points_y.append(best_checkpoint_point_y)
-    #     if min_dist < 100:
-    #         min_dists.append(min_dist)
-    #         if len(covered_checkpoints) == 0 or (
-    #                 len(covered_checkpoints) > 0 and covered_checkpoints[len(covered_checkpoints) - 1][
-    #             0] != best_checkpoint_point_x and covered_checkpoints[len(covered_checkpoints) - 1][
-    #                     1] != best_checkpoint_point_y):
-    #             if min_dist < 1:
-    #                 covered_checkpoints.append((best_checkpoint_point_x, best_checkpoint_point_y))
-
     experiment_metrics['effective_completed_distance'] = len(covered_checkpoints)*0.5
     experiment_metrics['position_deviation_mean'] = sum(min_dists) / len(min_dists)
     experiment_metrics['position_deviation_total_err'] = sum(min_dists)
-    experiment_metrics['position_deviation_mean_per_km'] = experiment_metrics['position_deviation_mean'] / (experiment_metrics['effective_completed_distance']/1000)
+    experiment_metrics['position_deviation_mean_per_km'] = (
+        experiment_metrics['position_deviation_mean'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
     starting_point_map = (checkpoints_tuples_x[0], checkpoints_tuples_y[0])
     experiment_metrics['starting_point_map'] = starting_point_map
-    if experiment_metrics['collisions'] > 0:
-        experiment_metrics['collisions_per_km'] = experiment_metrics['collisions'] / (experiment_metrics['effective_completed_distance']/1000)
-    else:
-        experiment_metrics['collisions_per_km'] = 0
-    if experiment_metrics['lane_invasions'] > 0:
-        experiment_metrics['lane_invasions_per_km'] = experiment_metrics['lane_invasions'] / (experiment_metrics['effective_completed_distance']/1000)
-    else:
-        experiment_metrics['lane_invasions_per_km'] = 0
-    experiment_metrics['suddenness_distance_control_command_per_km'] = experiment_metrics['suddenness_distance_control_commands'] / (experiment_metrics['effective_completed_distance']/1000)
-    experiment_metrics['suddenness_distance_throttle_per_km'] = experiment_metrics['suddenness_distance_throttle'] / (experiment_metrics['effective_completed_distance']/1000)
-    experiment_metrics['suddenness_distance_steer_per_km'] = experiment_metrics['suddenness_distance_steer'] / (experiment_metrics['effective_completed_distance']/1000)
-    experiment_metrics['suddenness_distance_brake_command_per_km'] = experiment_metrics['suddenness_distance_brake_command'] / (experiment_metrics['effective_completed_distance']/1000)
-    experiment_metrics['suddenness_distance_speed_per_km'] = experiment_metrics['suddenness_distance_speed'] / (experiment_metrics['effective_completed_distance']/1000)
+    experiment_metrics['collisions_per_km'] = (
+        experiment_metrics['collisions'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+        if experiment_metrics['collisions'] > 0 else 0
+    )
+    experiment_metrics['lane_invasions_per_km'] = (
+        experiment_metrics['lane_invasions'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+        if experiment_metrics['lane_invasions'] > 0 else 0
+    )
+    experiment_metrics['suddenness_distance_control_command_per_km'] = (
+        experiment_metrics['suddenness_distance_control_commands'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
+    experiment_metrics['suddenness_distance_throttle_per_km'] = (
+        experiment_metrics['suddenness_distance_throttle'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
+    experiment_metrics['suddenness_distance_steer_per_km'] = (
+        experiment_metrics['suddenness_distance_steer'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
+    experiment_metrics['suddenness_distance_brake_command_per_km'] = (
+        experiment_metrics['suddenness_distance_brake_command'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
+    experiment_metrics['suddenness_distance_speed_per_km'] = (
+        experiment_metrics['suddenness_distance_speed'] /
+        (experiment_metrics['effective_completed_distance']/1000)
+    )
+
     experiment_metrics['position_deviations'] = min_dists.tolist()
+    experiment_metrics['position_deviations_with_sign'] = min_dists_with_sign.tolist()  # <-- NEW
 
     logger.info("creating maps")
-    create_experiment_maps(experiment_metrics, experiment_metrics_filename, map_waypoints_tuples_x, map_waypoints_tuples_y, best_checkpoint_points_x, best_checkpoint_points_y, checkpoints_tuples_x, checkpoints_tuples_y, checkpoints_speeds, collision_points, lane_invasion_checkpoints, brake_checkpoints, min_dists, checkpoints_steer)
+    create_experiment_maps(
+        experiment_metrics, experiment_metrics_filename,
+        map_waypoints_tuples_x, map_waypoints_tuples_y,
+        best_checkpoint_points_x, best_checkpoint_points_y,
+        checkpoints_tuples_x, checkpoints_tuples_y,
+        checkpoints_speeds, collision_points,
+        lane_invasion_checkpoints, brake_checkpoints,
+        min_dists, checkpoints_steer
+    )
     logger.info("creating histograms")
-    create_speed_histograms_plot(experiment_metrics, experiment_metrics_filename, "deviation", min_dists)
-    create_speed_histograms_plot(experiment_metrics, experiment_metrics_filename, "speed", checkpoints_speeds)
+    create_histograms_plot(experiment_metrics, experiment_metrics_filename, "signed deviation", min_dists_with_sign)
+    create_histograms_plot(experiment_metrics, experiment_metrics_filename, "deviation", min_dists)
+    create_histograms_plot(experiment_metrics, experiment_metrics_filename, "speed", checkpoints_speeds)
     logger.info("creating speed line")
-    create_speed_line_plot(experiment_metrics, experiment_metrics_filename, checkpoints_speeds, checkpoints, waypoints_info, right)
+    create_speed_line_plot(
+        experiment_metrics, experiment_metrics_filename,
+        checkpoints_speeds, checkpoints, waypoints_info, right
+    )
     return experiment_metrics
 
-
-def create_speed_histograms_plot(experiment_metrics, experiment_metrics_filename, metric_name, checkpoints):
+def create_histograms_plot(experiment_metrics, experiment_metrics_filename, metric_name, checkpoints):
     city = experiment_metrics['carla_map'].split('/')[-1]
     metricname = f"{metric_name}_histogram"
     fig, ax = plt.subplots(figsize=(10, 5))
