@@ -6,7 +6,6 @@ import time
 import rospy
 
 from pilot_carla import PilotCarla
-from ui.tui.main_view import TUI
 from utils import environment
 from utils.colors import Colors
 from utils.configuration import Config
@@ -119,7 +118,7 @@ def main():
     experiment_model = app_configuration.experiment_model[brain_counter]
 
     if app_configuration.spawn_points:
-        spawn_point = app_configuration.spawn_points[world_counter][repetition_counter]
+       # spawn_point = app_configuration.spawn_points[world_counter][repetition_counter]
         environment.launch_env(world, random_spawn_point=app_configuration.experiment_random_spawn_point, carla_simulator=True, config_spawn_point=app_configuration.spawn_points[world_counter][repetition_counter])
     else:
         environment.launch_env(world, random_spawn_point=app_configuration.experiment_random_spawn_point, carla_simulator=True)
@@ -137,8 +136,16 @@ def main():
         experiment_timeout = CARLA_TOWNS_TIMEOUTS[controller.carla_map.name]
     else:
         experiment_timeout = app_configuration.experiment_timeouts[world_counter]
+    max_waits = app_configuration.max_waits[world_counter]
 
-    rospy.sleep(experiment_timeout)
+    waits = 0
+
+    while not pilot.done and waits <= max_waits:
+        time.sleep(experiment_timeout)
+
+        waits += 1
+    print("out")
+
     controller.stop_recording_metrics()
     controller.pilot.stop()
     controller.stop_pilot()

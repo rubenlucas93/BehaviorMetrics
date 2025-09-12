@@ -7,7 +7,6 @@
 **/logs
 **.bag
 bag_analysis/
-bag_examples/
 core
 tmp_*
 carla_birdeye_view/
@@ -120,6 +119,3 @@ dmypy.json
 
 # Custom directories
 bags_analysis/
-behavior_metrics/
-behavior_metrics/carla-birdeye-view/
-carla-birdeye-view/

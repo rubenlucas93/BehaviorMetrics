@@ -31,17 +31,14 @@ __contributors__ = []
 __license__ = 'GPLv3'
 
 
-ros_version = os.environ.get('ROS_VERSION', '2')
-
-
 def launch_env(launch_file, random_spawn_point=False, carla_simulator=False, config_spawn_point=None, config_town=None):
     """Launch the environmet specified by the launch_file given in command line at launch time.
     Arguments:
         launch_file {str} -- path of the launch file to be executed
     """
+
     # close previous instances of ROS and simulators if hanged.
     close_ros_and_simulators()
-    # launch_file = launch_file.replace('launch.py', 'launch')  # remove .py extension from launch file    
     try:
         if carla_simulator:
             if random_spawn_point:
@@ -73,53 +70,25 @@ def launch_env(launch_file, random_spawn_point=False, carla_simulator=False, con
             else:
                 spawn_point = None
             with open("/tmp/.carlalaunch_stdout.log", "w") as out, open("/tmp/.carlalaunch_stderr.log", "w") as err:
-                # ros_version = os.environ.get('ROS_VERSION', '2')
-                if ros_version == '2':
-                    # In ROS2, quality value parser is passed environment variable
-                    # quality = os.environ.get('QUALITY', 'Low')
-                    tree = ET.parse(ROOT_PATH + '/' + launch_file.replace('.launch.py', '.launch'))
-                    root = tree.getroot()
-                    quality = root.find(".//*[@name=\"quality\"]")
-                    if quality == 'Low':
-                        subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err) 
-                    else:
-                        subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen"], stdout=out, stderr=err)
-                else:
-                    # In ros1, quality value parser is passed as XML argument
-                    tree = ET.parse(ROOT_PATH + '/' + launch_file)
-                    root = tree.getroot()
-                    quality = root.find(".//*[@name=\"quality\"]")
-                    if quality == None:
-                        subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen"], stdout=out, stderr=err)
-                    elif quality.attrib['default'] == 'Low':
-                        subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)                
-                    #subprocess.Popen(["/home/jderobot/Documents/Projects/carla_simulator_0_9_13/CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)
+                tree = ET.parse(ROOT_PATH + '/' + launch_file)
+                root = tree.getroot()
+                quality = root.find(".//*[@name=\"quality\"]")
+                # if quality == None:
+                #     subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen"], stdout=out, stderr=err)
+                # elif quality.attrib['default'] == 'Low':
+                #     subprocess.Popen([os.environ["CARLA_ROOT"] + "CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)
+                #subprocess.Popen(["/home/jderobot/Documents/Projects/carla_simulator_0_9_13/CarlaUE4.sh", "-RenderOffScreen", "-quality-level=Low"], stdout=out, stderr=err)
+            logger.info("SimulatorEnv: launching simulator server.")
             time.sleep(5)
             with open("/tmp/.roslaunch_stdout.log", "w") as out, open("/tmp/.roslaunch_stderr.log", "w") as err:
                 if random_spawn_point or (spawn_point is not None and town is not None):
-                    # child = subprocess.Popen(["roslaunch", ROOT_PATH + '/tmp_circuit.launch'], stdout=out, stderr=err)
-                    launch_file_path = ROOT_PATH + '/tmp_circuit.launch'
+                    child = subprocess.Popen(["roslaunch", ROOT_PATH + '/tmp_circuit.launch'], stdout=out, stderr=err)
                 else:
-                    # child = subprocess.Popen(["roslaunch", ROOT_PATH + '/' + launch_file], stdout=out, stderr=err)
-                    launch_file_path = ROOT_PATH + '/' + launch_file
-                    
-                # if os.environ.get('ROS_VERSION', '1') == '2':
-                if ros_version == '2':
-                    launch_path = os.path.join(ROOT_PATH, launch_file)
-                    # ros_cmd = ["ros2", "launch", ROOT_PATH, launch_file]
-                    ros_cmd = ['ros2', 'launch', launch_path]
-                else:
-                    ros_cmd = ["roslaunch", launch_file_path]
-                child = subprocess.Popen(ros_cmd, stdout=out, stderr=err)
+                    child = subprocess.Popen(["roslaunch", ROOT_PATH + '/' + launch_file], stdout=out, stderr=err)
         else:
             with open("/tmp/.roslaunch_stdout.log", "w") as out, open("/tmp/.roslaunch_stderr.log", "w") as err:
-                if os.environ.get('ROS_VERSION', '1') == '2':
-                    launch_path = os.path.join(ROOT_PATH, launch_file)
-                    ros_cmd = ['ros2', 'launch', launch_path]
-                    # ros_cmd = ["ros2", "launch", launch_file]
-                else:
-                    ros_cmd = ["roslaunch", launch_file]
-                child = subprocess.Popen(ros_cmd, stdout=out, stderr=err)
+                child = subprocess.Popen(["roslaunch", launch_file], stdout=out, stderr=err)
+        logger.info("SimulatorEnv: launching simulator server.")
     except OSError as oe:
         logger.error("SimulatorEnv: exception raised launching simulator server. {}".format(oe))
         close_ros_and_simulators()
@@ -151,19 +120,19 @@ def close_ros_and_simulators(close_ros_resources=True):
         except subprocess.CalledProcessError as ce:
             logger.error("SimulatorEnv: exception raised executing killall command for gzserver {}".format(ce))
 
-    if ps_output.count('CarlaUE4.sh') > 0:
-        try:
-            subprocess.check_call(["killall", "-9", "CarlaUE4.sh"])
-            logger.debug("SimulatorEnv: CARLA server killed.")
-        except subprocess.CalledProcessError as ce:
-            logger.error("SimulatorEnv: exception raised executing killall command for CARLA server {}".format(ce))
+    # if ps_output.count('CarlaUE4.sh') > 0:
+    #     try:
+    #         subprocess.check_call(["killall", "-9", "CarlaUE4.sh"])
+    #         logger.debug("SimulatorEnv: CARLA server killed.")
+    #     except subprocess.CalledProcessError as ce:
+    #         logger.error("SimulatorEnv: exception raised executing killall command for CARLA server {}".format(ce))
 
-    if ps_output.count('CarlaUE4-Linux-Shipping') > 0:
-        try:
-            subprocess.check_call(["killall", "-9", "CarlaUE4-Linux-Shipping"])
-            logger.debug("SimulatorEnv: CarlaUE4-Linux-Shipping killed.")
-        except subprocess.CalledProcessError as ce:
-            logger.error("SimulatorEnv: exception raised executing killall command for CarlaUE4-Linux-Shipping {}".format(ce))
+    # if ps_output.count('CarlaUE4-Linux-Shipping') > 0:
+    #     try:
+    #         subprocess.check_call(["killall", "-9", "CarlaUE4-Linux-Shipping"])
+    #         logger.debug("SimulatorEnv: CarlaUE4-Linux-Shipping killed.")
+    #     except subprocess.CalledProcessError as ce:
+    #         logger.error("SimulatorEnv: exception raised executing killall command for CarlaUE4-Linux-Shipping {}".format(ce))
 
     if ps_output.count('rosout') > 0 and close_ros_resources:
         try:
@@ -219,13 +188,6 @@ def close_ros_and_simulators(close_ros_resources=True):
             logger.debug("SimulatorEnv:rosout killed.")
         except subprocess.CalledProcessError as ce:
             logger.error("SimulatorEnv: exception raised executing killall command for rosout {}".format(ce))
-    
-    if ps_output.count('carla_manual_control') > 0:
-        try:
-            subprocess.check_call(["killall", "-9", "carla_manual_control"])
-            logger.debug("SimulatorEnv: carla_manual_control killed.")
-        except subprocess.CalledProcessError as ce:
-            logger.error("SimulatorEnv: exception raised executing killall command for carla_manual_control {}".format(ce))
 
 
 def is_gzclient_open():

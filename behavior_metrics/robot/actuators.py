@@ -27,13 +27,13 @@ class Actuators:
 
     """
 
-    def __init__(self, actuators_config, node):
+    def __init__(self, actuators_config):
         """Constructor of the class
 
         Arguments:
             actuators_config {dict} -- Configuration of the different actuators.
         """
-        self.node = node
+
         # Load motors
         motors_conf = actuators_config.get('Motors', None)
         carla_motors_conf = actuators_config.get('CARLA_Motors', None)
@@ -56,12 +56,12 @@ class Actuators:
             if 'RL' in actuator_config[elem]:
                 if actuator_config[elem]['RL'] == False:
                     if actuator_type == 'motor':
-                        actuator_dict[name] = PublisherMotors(self.node, topic, vmax, wmax, 0, 0)
+                        actuator_dict[name] = PublisherMotors(topic, vmax, wmax, 0, 0)
             else:
                 if actuator_type == 'motor':
-                    actuator_dict[name] = PublisherMotors(self.node, topic, vmax, wmax, 0, 0)
+                    actuator_dict[name] = PublisherMotors(topic, vmax, wmax, 0, 0)
                 elif actuator_type == 'carla_motor':
-                    actuator_dict[name] = PublisherCARLAMotors(self.node, topic, vmax, wmax, 0, 0)
+                    actuator_dict[name] = PublisherCARLAMotors(topic, vmax, wmax, 0, 0)
         return actuator_dict
 
     def __get_actuator(self, actuator_name, actuator_type):

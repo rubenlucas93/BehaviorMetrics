@@ -11,7 +11,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
-import os
+
 import json
 from pathlib import Path
 
@@ -43,9 +43,9 @@ class InfoLabel(QLabel):
         """
         QLabel.__init__(self, parent)
         self.description = description
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
+
         self.setFixedSize(60, 60)
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
         self.setMouseTracking(True)
         self.setStyleSheet("""
                                 QToolTip {
@@ -58,11 +58,11 @@ class InfoLabel(QLabel):
 
     def enterEvent(self, event):
         """Mouse event when entering the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
 
     def leaveEvent(self, event):
         """Mouse event when leaving the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
 
 
 # class WorldLabel(QLabel):

@@ -19,7 +19,7 @@ from PyQt5.QtCore import (QParallelAnimationGroup, QPoint, QPropertyAnimation,
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (QGraphicsOpacityEffect, QLabel, QVBoxLayout,
                              QWidget)
-import os
+
 __author__ = 'fqez'
 __contributors__ = []
 __license__ = 'GPLv3'
@@ -101,10 +101,10 @@ class TitleWindow(QWidget):
         self.setLayout(main_layout)
 
         mid = self.height() // 2
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
+
         self.frame_above = QLabel(self)
         self.frame_above.setGeometry(0, 0, self.width(), self.height())
-        self.frame_above.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/logo.svg'))
+        self.frame_above.setPixmap(QPixmap(':/assets/logo.svg'))
         self.frame_above.setAlignment(Qt.AlignCenter)
 
         self.clk_label = AnimatedLabel(self)    # no se si este mejor o el label normal

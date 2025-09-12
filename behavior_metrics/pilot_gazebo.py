@@ -12,11 +12,9 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
-import os
-import threading
 import threading
 import time
-
+import rospy
 import subprocess
 import traceback
 
@@ -29,13 +27,6 @@ from utils.constants import MIN_EXPERIMENT_PERCENTAGE_COMPLETED
 from rosgraph_msgs.msg import Clock
 
 import numpy as np
-
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:    
-    import rospy
 
 __author__ = 'fqez'
 __contributors__ = []
@@ -57,14 +48,14 @@ class PilotGazebo(threading.Thread):
         brains {brains.brains_handler.Brains} -- Brains controller instance
     """
 
-    def __init__(self, node, configuration, controller, brain_path):
+    def __init__(self, configuration, controller, brain_path):
         """Constructor of the pilot class
 
         Arguments:
             configuration {utils.configuration.Config} -- Configuration instance of the application
             controller {utils.controller.Controller} -- Controller instance of the MVC of the application
         """
-        self.node = node
+
         self.controller = controller
         self.controller.set_pilot(self)
         self.configuration = configuration
@@ -109,10 +100,9 @@ class PilotGazebo(threading.Thread):
     def initialize_robot(self):
         """Initialize robot interfaces (sensors and actuators) and its brain from configuration"""
         self.stop_interfaces()
-        
         if self.robot_type != 'drone':
-            self.actuators = Actuators(self.configuration.actuators,self.node)
-            self.sensors = Sensors(self.configuration.sensors,self.node)
+            self.actuators = Actuators(self.configuration.actuators)
+            self.sensors = Sensors(self.configuration.sensors)
         if hasattr(self.configuration, 'experiment_model') and type(self.configuration.experiment_model) != list:
             self.brains = Brains(self.sensors, self.actuators, self.brain_path, self.controller,
                                  self.configuration.experiment_model, self.configuration.brain_kwargs)
@@ -165,10 +155,7 @@ class PilotGazebo(threading.Thread):
                 self.real_time_factors.append(self.real_time_factor)
                 self.brain_iterations_simulated_time.append(self.ros_clock_time - start_time_ros)
         self.execution_completed = True
-        if ros_version == '2':
-            self.node.destroy_subscription(self.clock_subscriber)
-        else:    
-            self.clock_subscriber.unregister()
+        self.clock_subscriber.unregister()
         self.stats_process.terminate()
         poll = self.stats_process.poll()
         while poll is None:
@@ -293,11 +280,7 @@ class PilotGazebo(threading.Thread):
             time.sleep(1)
             poll = self.stats_process.poll()
 
-        if ros_version == '2':
-            self.clock_subscriber = self.node.create_subscription(Clock, "/clock", self.clock_callback,1)
-        else:    
-            self.clock_subscriber = rospy.Subscriber("/clock", Clock, self.clock_callback)
-        
+        self.clock_subscriber = rospy.Subscriber("/clock", Clock, self.clock_callback)
         with self.stats_process.stdout:
             for line in iter(self.stats_process.stdout.readline, b''):
                 stats_list = [x.strip() for x in line.split(b',')]

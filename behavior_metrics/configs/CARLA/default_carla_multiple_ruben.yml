@@ -1,0 +1,110 @@
+Behaviors:
+    Robot:
+        Sensors:
+            Cameras:
+                Camera_0:
+                    Name: 'camera_0'
+                    Topic: '/carla/ego_vehicle/rgb_front/image'
+                Camera_1:
+                    Name: 'camera_1'
+                    Topic: '/carla/ego_vehicle/rgb_view/image'
+                Camera_2:
+                    Name: 'camera_2'
+                    Topic: '/carla/ego_vehicle/semantic_segmentation_front/image'
+                Camera_3:
+                    Name: 'camera_3'
+                    Topic: '/carla/ego_vehicle/dvs_front/image'
+            Pose3D:
+                Pose3D_0:
+                    Name: 'pose3d_0'
+                    Topic: '/carla/ego_vehicle/odometry'
+            BirdEyeView:
+                BirdEyeView_0:
+                    Name: 'bird_eye_view_0'
+                    Topic: ''
+            Speedometer:
+                Speedometer_0:
+                    Name: 'speedometer_0'
+                    Topic: '/carla/ego_vehicle/speedometer'
+            wheel:
+                wheel:
+                    Name: 'wheel'
+                    Topic: '/carla/ego_vehicle/steering_angle'
+        BrainPath: [
+#            'brains/CARLA/brain_carla_sb_ddpg.py',
+#            'brains/CARLA/brain_carla_sb_sac.py',
+#            'brains/CARLA/brain_carla_sb_ppo.py',
+            'brains/CARLA/brain_carla_sb_ddpg_2.py',
+#            'brains/CARLA/brain_carla_sb_ddpg_3.py',
+#            'brains/CARLA/brain_carla_sb_ppo.py',
+            ]
+        Actuators:
+            CARLA_Motors:
+                Motors_0:
+                    Name: 'motors_0'
+                    Topic: '/carla/ego_vehicle/vehicle_control_cmd'
+                    MaxV: 3
+                    MaxW: 0.3
+
+        PilotTimeCycle: 50
+        AsyncMode: True
+        Parameters:
+#            Model: ["sac", "ppo", "ddpg"]
+#            Model: ["any", "any"]
+            Model: ["any"]
+            ImageCropped: True
+            ImageSize: [ 100,50 ]
+            ImageNormalized: True
+            PredictionsNormalized: True
+            GPU: True
+            UseOptimized: True
+            ImageTranform: ''
+        Type: 'CARLA'
+    Experiment:
+        Name: "Experiment name"
+        Description: "Experiment description"
+        UseWorldTimeouts: False
+#        Timeout: [1, 1, 1] # time to poll if experiment is done (1 for each world)
+#        MaxWaits: [450, 450, 450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+        Timeout: [ 1 ] # time to poll if experiment is done (1 for each world)
+        MaxWaits: [ 300 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+#        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
+#        MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+        Repetitions: 1
+    Simulation:
+        World: [
+#             configs/CARLA/CARLA_launch_files/town_04_clockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_05_clockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_05_anticlockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_10_anticlockwise_ruben.launch,
+#              configs/CARLA/CARLA_launch_files/town_02_clockwise.launch,
+             configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_06_anticlockwise_ruben.launch
+            ]
+        RandomSpawnPoint: False
+        SpawnPoints: []
+    Dataset:
+        In: '/tmp/my_bag.bag'
+        Out: ''
+    Stats:
+        Out: './'
+        PerfectLap: './perfect_bags/lap-simple-circuit.bag'
+    Layout:
+        Frame_0:
+            Name: frame_0
+            Geometry: [1, 1, 1, 1]
+            Data: rgbimage
+        Frame_1:
+            Name: frame_1
+            Geometry: [0, 1, 1, 1]
+            Data: rgbimage
+        Frame_2:
+            Name: frame_2
+            Geometry: [0, 2, 1, 1]
+            Data: rgbimage
+        Frame_3:
+            Name: frame_3
+            Geometry: [1, 2, 1, 1]
+            Data: rgbimage

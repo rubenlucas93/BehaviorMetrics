@@ -4,18 +4,7 @@ import time
 from os import path, makedirs
 
 import npyscreen
-# import rospy
-
-# Attempt to import rospy (ROS1). If not available, try to import rclpy (ROS2).
-try:
-    import rospy
-    ROS_VERSION = "ros1"
-except ModuleNotFoundError:
-    try:
-        import rclpy
-        ROS_VERSION = "ros2"
-    except ModuleNotFoundError:
-        raise ImportError("Neither rospy nor rclpy is installed. Please install one.")
+import rospy
 
 from ui.tui.keyboard_handler import KHandler
 from utils.constants import ROOT_PATH
@@ -55,15 +44,7 @@ class TUI(npyscreen.StandardApp):
         ros_ready = False
         while not ros_ready:
             try:
-                if ROS_VERSION == "ros1":
-                    raw_topics = rospy.get_published_topics()
-                else:
-                    if not rclpy.ok():
-                        rclpy.init(args=None)
-                    temp_node = rclpy.create_node('tui_temp_node')
-                    raw_topics_and_types = temp_node.get_topic_names_and_types()
-                    raw_topics = [(t, types) for t, types in raw_topics_and_types]
-                    temp_node.destroy_node()
+                raw_topics = rospy.get_published_topics()
                 ros_ready = True
             except Exception as e:
                 pass

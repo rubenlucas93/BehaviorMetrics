@@ -19,6 +19,7 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 import subprocess
 import time
 import os
+import rospy
 import random
 import sys
 import matplotlib.pyplot as plt
@@ -29,13 +30,6 @@ from utils.logger import logger
 from utils.constants import MIN_EXPERIMENT_PERCENTAGE_COMPLETED, CIRCUITS_TIMEOUTS
 from pilot_gazebo import PilotGazebo
 from utils.tmp_world_generator import tmp_world_generator
-
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:    
-    import rospy
 
 def run_brains_worlds(app_configuration, controller, randomize=False):
     worlds = enumerate(app_configuration.current_world)
@@ -110,7 +104,7 @@ def run_brains_worlds(app_configuration, controller, randomize=False):
                     experiment_timeout = CIRCUITS_TIMEOUTS[os.path.basename(world)] * 1.1
                 while (controller.pilot.ros_clock_time - time_start < experiment_timeout and not is_finished) \
                         or controller.pilot.ros_clock_time - time_start < 20:
-                    time.sleep(10)
+                    rospy.sleep(10)
                     old_point = new_point
                     new_point = np.array([controller.pilot.sensors.get_pose3d('pose3d_0').getPose3d().x,
                                           controller.pilot.sensors.get_pose3d('pose3d_0').getPose3d().y])

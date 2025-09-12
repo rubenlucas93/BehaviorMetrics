@@ -20,10 +20,10 @@ import shlex
 import subprocess
 import threading
 import cv2
-#import rospy
+import rospy
 import os
 import time
-#import rosbag
+import rosbag
 import json
 
 from std_srvs.srv import Empty
@@ -34,14 +34,6 @@ from utils.logger import logger
 from utils.constants import CIRCUITS_TIMEOUTS
 from std_msgs.msg import String
 from utils import metrics_gazebo
-
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == "2":
-    import rclpy
-    from rclpy.node import Node
-else:
-    import rospy
-    import rosbag
 
 __author__ = 'fqez'
 __contributors__ = []
@@ -59,10 +51,9 @@ class ControllerGazebo:
         recording {bool} -- Flag to determine if a rosbag is being recorded
     """
 
-    def __init__(self, node: Node):
+    def __init__(self):
         """ Constructor of the class. """
         pass
-        self.node = node
         self.__data_loc = threading.Lock()
         self.__pose_loc = threading.Lock()
         self.data = {}
@@ -131,43 +122,23 @@ class ControllerGazebo:
 
     def reset_gazebo_simulation(self):
         logger.info("Restarting simulation")
-        if ros_version == "2":
-            reset_physics = self.node.create_client(Empty, '/gazebo/reset_world')
-        else:
-            reset_physics = rospy.ServiceProxy('/gazebo/reset_world', Empty)
-        if ros_version == "2":
-            reset_physics.call_async(None)
-        else:
-            reset_physics()
+        reset_physics = rospy.ServiceProxy('/gazebo/reset_world', Empty)
+        reset_physics()
 
     def pause_gazebo_simulation(self):
         logger.info("Pausing simulation")
-        if ros_version == "2":
-            pause_physics = self.node.create_client(Empty,'/gazebo/pause_physics')
-        else:
-            pause_physics = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
+        pause_physics = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
         try:
-            if ros_version == "2":
-                pause_physics.call_async(None)
-            else:
-                pause_physics()
+            pause_physics()
         except Exception as ex:
             print(ex)
         self.pilot.stop_event.set()
 
     def unpause_gazebo_simulation(self):
         logger.info("Resuming simulation")
-
-        if ros_version == "2":
-            unpause_physics = self.node.create_client(Empty, '/gazebo/unpause_physics')
-        else:
-            unpause_physics = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
+        unpause_physics = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
         try:
-            if ros_version == "2":
-                unpause_physics.call_async(None)
-            else:
-                unpause_physics()
-            
+            unpause_physics()
         except Exception as ex:
             print(ex)
         self.pilot.stop_event.clear()
@@ -179,41 +150,29 @@ class ControllerGazebo:
             topics {list} -- List of topics to be recorde
             dataset_name {str} -- Path of the resulting bag file
         """
-         if self.recording:
+
+        if not self.recording:
+            logger.info("Recording bag at: {}".format(dataset_name))
+            self.recording = True
+            command = "rosbag record -O " + dataset_name + " " + " ".join(topics) + " __name:=behav_bag"
+            command = shlex.split(command)
+            with open("logs/.roslaunch_stdout.log", "w") as out, open("logs/.roslaunch_stderr.log", "w") as err:
+                self.rosbag_proc = subprocess.Popen(command, stdout=out, stderr=err)
+        else:
             logger.info("Rosbag already recording")
             self.stop_record()
-            return
-        
-        self.recording = True
-        
-        if ros_version == "2":
-            command = "ros2 bag record -o " + dataset_name + "/behav_bag" + " " + " ".join(topics)
-        else:
-            command = "rosbag record -O " + dataset_name + " " + " ".join(topics) + " __name:=behav_bag"
-            
-        logger.info("Recording bag at: {}".format(dataset_name))
-        cmd_split = shlex.split(command)
-        with open("./logs/.roslaunch_stdout.log", "w") as out, open("./logs/.roslaunch_stderr.log", "w") as err:
-            self.rosbag_proc = subprocess.Popen(cmd_split, stdout=out, stderr=err)
 
     def stop_record(self):
         """Stop the rosbag recording process."""
-        if not self.recording or not self.rosbag_proc:
-            logger.info("No bag recording")
-            return
-        
-        if ros_version == "2":
-            self.rosbag_proc.terminate()
-            self.rosbag_proc.wait()
-            logger.info("Stopped bag recording")
-        else:
+        if self.rosbag_proc and self.recording:
+            logger.info("Stopping bag recording")
+            self.recording = False
             command = "rosnode kill /behav_bag"
-            command_split = shlex.split(command)
-            with open("./logs/.roslaunch_stdout.log", "w") as out, open("./logs/.roslaunch_stderr.log", "w") as err:
-                subprocess.Popen(command_split, stdout=out, stderr=err)
-        self.recording = False  
-        self.rosbag_proc = None
-
+            command = shlex.split(command)
+            with open("logs/.roslaunch_stdout.log", "w") as out, open("logs/.roslaunch_stderr.log", "w") as err:
+                subprocess.Popen(command, stdout=out, stderr=err)
+        else:
+            logger.info("No bag recording")
 
     def record_metrics(self, perfect_lap_filename, metrics_record_dir_path, world_counter=None, brain_counter=None, repetition_counter=None):
         logger.info("Recording metrics bag at: {}".format(metrics_record_dir_path))
@@ -247,26 +206,18 @@ class ControllerGazebo:
         time_str = time.strftime("%Y%m%d-%H%M%S")
         self.experiment_metrics_filename = time_str + '.bag'
         topics = ['/F1ROS/odom', '/clock']
-
-        if ros_version == "2":
-            command = "ros2 bag record -o " + self.experiment_metrics_bag_filename + " " + " ".join(topics)
-        else:
-            command = "rosbag record -O " + self.experiment_metrics_bag_filename + " " + " ".join(topics) + " __name:=behav_metrics_bag"
-  
+        command = "rosbag record -O " + self.experiment_metrics_filename + " " + " ".join(topics) + " __name:=behav_metrics_bag"
         command = shlex.split(command)
-        with open("./logs/.roslaunch_stdout.log", "w") as out, open("./logs/.roslaunch_stderr.log", "w") as err:
+        with open("logs/.roslaunch_stdout.log", "w") as out, open("logs/.roslaunch_stderr.log", "w") as err:
             self.proc = subprocess.Popen(command, stdout=out, stderr=err)
 
     def stop_recording_metrics(self, pitch_error=False):
         logger.info("Stopping metrics bag recording")
         end_time = time.time()
 
-        if ros_version == "2":
-            command = "ros2 node kill /behav_metrics_bag"
-        else:
-            command = "rosnode kill /behav_metrics_bag"
+        command = "rosnode kill /behav_metrics_bag"
         command = shlex.split(command)
-        with open("./logs/.roslaunch_stdout.log", "w") as out, open("./logs/.roslaunch_stderr.log", "w") as err:
+        with open("logs/.roslaunch_stdout.log", "w") as out, open("logs/.roslaunch_stderr.log", "w") as err:
             subprocess.Popen(command, stdout=out, stderr=err)
 
         # Wait for rosbag file to be closed. Otherwise it causes error

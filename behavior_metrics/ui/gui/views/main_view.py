@@ -18,7 +18,6 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
-import os
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPalette, QPixmap
@@ -50,9 +49,9 @@ class InfoLabel(QLabel):
         QLabel.__init__(self, parent)
         self.description = description
         self.parent = parent
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
+
         self.setFixedSize(60, 60)
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
         self.setMouseTracking(True)
         self.setStyleSheet("""QToolTip {
                            background-color: rgb(51,51,51);
@@ -64,11 +63,11 @@ class InfoLabel(QLabel):
 
     def enterEvent(self, event):
         """Mouse event when entering the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
 
     def leaveEvent(self, event):
         """Mouse event when leaving the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
 
     def mousePressEvent(self, event):
         """Mouse event when pressing the widget"""
@@ -106,9 +105,8 @@ class ClickableLabel(QLabel):
         self.setFixedSize(30, 30)
         self.parent = parent
         self.creator = creator
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
-        self.pmax_dark = QPixmap(self.gui_views_path + '/resources/assets/gear_dark.png')
-        self.pmax_light = QPixmap(self.gui_views_path + '/resources/assets/gear_light.png')
+        self.pmax_dark = QPixmap(':/assets/gear_dark.png')
+        self.pmax_light = QPixmap(':/assets/gear_light.png')
         self.setStyleSheet('background-color: rgba(0, 0, 0, 0)')
         self.setPixmap(self.pmax_light)
         self.setScaledContents(True)
@@ -400,9 +398,8 @@ class MainView(QWidget):
     """
     switch_window = pyqtSignal()
 
-    def __init__(self, layout_configuration, configuration, controller, parent=None, node=None):
+    def __init__(self, layout_configuration, configuration, controller, parent=None):
         super(MainView, self).__init__(parent)
-        self.node = node
         self.parent = parent
         self.controller = controller
         self.layout_configuration = layout_configuration
@@ -420,7 +417,7 @@ class MainView(QWidget):
         # define view's widgets
 
         central_layout = QHBoxLayout()
-        toolbar = Toolbar(self.configuration, self.controller, self.parent, self.node)
+        toolbar = Toolbar(self.configuration, self.controller, self.parent)
         self.matrix = LayoutMatrix(self.layout_configuration, self.configuration, self)
         central_layout.addWidget(toolbar)
         central_layout.addWidget(self.matrix)

@@ -53,8 +53,7 @@ Behaviors:
         Timeout: [500] # for each world!
     Simulation:
         Task: "follow_route"
-        # World: [configs/CARLA/CARLA_launch_files/test_suite_template.launch.py]
-        World: [configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch.py]
+        World: [configs/CARLA/CARLA_launch_files/test_suite_template.launch]
         TestSuite: 'Town02_two_turns'
         RandomizeRoutes: False
         NumRoutes: 2

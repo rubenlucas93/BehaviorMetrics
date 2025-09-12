@@ -151,7 +151,7 @@ class Brain:
                     self.running_light = False
 
             print(f'high-level command: {hlc}')
-            # print(f'light: {light_status}')
+            #print(f'light: {light_status}')
             frame_data = {
                 'hlc': hlc,
                 'measurements': speed,
@@ -159,9 +159,6 @@ class Brain:
                 'segmentation': np.copy(seg_image),
                 'light': np.array([traffic_light_to_int(light_status)])
             }
-            
-            print(frame_data['rgb'].shape)
-            print(frame_data['segmentation'].shape)
 
             throttle, steer, brake = model_control(self.net, 
                                     frame_data, 
@@ -173,7 +170,7 @@ class Brain:
 
             self.motors.sendThrottle(throttle)
             self.motors.sendSteer(steer)
-            self.motors.sendBrake(brake)   # comentar o enviar brake = 0.0, el modelo no contempla el freno
+            self.motors.sendBrake(brake)
 
             # calculate distance to target point
             # print(f'vehicle location: ({vehicle_location.x}, {-vehicle_location.y})')

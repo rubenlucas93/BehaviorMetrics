@@ -1,16 +1,8 @@
-# import rospy
-import os
+import rospy
 from utils.logger import logger
 from geometry_msgs.msg import Twist
 import threading
 from .threadPublisher import ThreadPublisher
-
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:
-    import rospy    
 
 try:
     from carla_msgs.msg import CarlaEgoVehicleControl
@@ -21,12 +13,12 @@ except ModuleNotFoundError as ex:
 def cmdvel2Twist(vel):
 
     tw = Twist()
-    tw.linear.x = float(vel.vx)  
-    tw.linear.y =  float(vel.vy)
-    tw.linear.z = float(vel.vz)
-    tw.angular.x = float(vel.ax)
-    tw.angular.y = float(vel.ay)
-    tw.angular.z = float(vel.az)
+    tw.linear.x = vel.vx
+    tw.linear.y = vel.vy
+    tw.linear.z = vel.vz
+    tw.angular.x = vel.ax
+    tw.angular.y = vel.ay
+    tw.angular.z = vel.az
 
     return tw
 
@@ -89,20 +81,16 @@ class CARLAVel():
 
 class PublisherMotors:
 
-    def __init__(self, node: Node, topic: str, maxV, maxW, v, w):
-        self.node = node
+    def __init__(self, topic, maxV, maxW, v, w):
+
         self.maxW = maxW
         self.maxV = maxV
         self.v = v
         self.w = w
         self.topic = topic
         self.data = CMDVel()
-        if ros_version == '2':
-            # rclpy.init()    
-            self.pub = self.node.create_publisher(Twist, self.topic, 1)
-        else:   
-            self.pub = rospy.Publisher(self.topic, Twist, queue_size=1)
-            rospy.init_node("FollowLineF1")
+        self.pub = rospy.Publisher(self.topic, Twist, queue_size=1)
+        rospy.init_node("FollowLineF1")
         self.lock = threading.Lock()
         self.kill_event = threading.Event()
         self.thread = ThreadPublisher(self, self.kill_event)
@@ -174,19 +162,16 @@ class PublisherMotors:
 
 class PublisherCARLAMotors:
 
-    def __init__(self, node: Node, topic: str, maxV, maxW, v, w):
-        self.node = node
+    def __init__(self, topic, maxV, maxW, v, w):
+
         self.maxW = maxW
         self.maxV = maxV
         self.v = v
         self.w = w
         self.topic = topic
         self.data = CARLAVel()
-        if ros_version == '2':
-            self.pub = self.node.create_publisher(CarlaEgoVehicleControl, self.topic, 1)
-        else:  
-            self.pub = rospy.Publisher(self.topic, CarlaEgoVehicleControl, queue_size=1)
-            rospy.init_node("CARLAMotors")
+        self.pub = rospy.Publisher(self.topic, CarlaEgoVehicleControl, queue_size=1)
+        rospy.init_node("CARLAMotors")
         self.lock = threading.Lock()
         self.kill_event = threading.Event()
         self.thread = ThreadPublisher(self, self.kill_event)
@@ -201,14 +186,7 @@ class PublisherCARLAMotors:
 
     def stop(self):
         self.kill_event.set()
-        if ros_version == '2':
-            if self.pub is not None:                
-                self.node.destroy_publisher(self.pub)
-                self.pub = None
-        else:
-            if self.pub is not None:
-                self.pub.unregister()
-                self.pub = None
+        self.pub.unregister()
 
     def start(self):
 

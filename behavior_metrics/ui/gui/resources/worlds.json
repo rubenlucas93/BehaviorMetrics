@@ -274,7 +274,7 @@
     "CARLA": [
       {
         "name": "Town01",
-        "world": "/home/canveo/carla_ws/ros-bridge/src/carla_ros_bridge/launch/carla_ros_bridge_with_example_ego_vehicle.launch.py",
+        "world": "/home/jderobot/carla-ros-bridge/catkin_ws/src/ros-bridge/carla_ros_bridge/launch/carla_ros_bridge_with_example_ego_vehicle.launch",
         "description": "Description"
       }
     ]

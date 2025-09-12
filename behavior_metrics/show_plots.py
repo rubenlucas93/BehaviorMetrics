@@ -20,7 +20,7 @@ bridge = CvBridge()
 class MetricsWindow(QtWidgets.QMainWindow):
     def __init__(self, bag_file, x_points, y_points, first_image, bag_metadata, experiment_metrics,
                  circuit_diameter):
-        super().__init__(self, "ShowMetrics")
+        super().__init__()
         self._main = QtWidgets.QWidget()
         self.setCentralWidget(self._main)
         self.layout = QtWidgets.QGridLayout(self._main)

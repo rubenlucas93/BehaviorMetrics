@@ -1,13 +1,6 @@
-import os
 import threading
 import numpy as np
-# import rospy
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:
-    import rospy
+import rospy
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image as ImageROS
@@ -23,10 +16,7 @@ def imageMsg2Image(img, bridge):
     image.width = img.width
     image.height = img.height
     image.format = "RGB8"
-    if ros_version == '2':
-        image.timeStamp = img.header.stamp.sec + (img.header.stamp.nanosec * 1e-9)
-    else:
-        image.timeStamp = img.header.stamp.secs + (img.header.stamp.nsecs * 1e-9)
+    image.timeStamp = img.header.stamp.secs + (img.header.stamp.nsecs * 1e-9)
     cv_image = 0
     if (img.encoding[-2:] == "C1"):
         # gray_img_buff = bridge.imgmsg_to_cv2(img, img.encoding)
@@ -58,8 +48,7 @@ class Image:
 
 class ListenerCamera:
 
-    def __init__(self, node: Node, topic: str):
-        self.node = node
+    def __init__(self, topic):
         self.topic = topic
         self.data = Image()
         self.sub = None
@@ -78,20 +67,10 @@ class ListenerCamera:
         self.lock.release()
 
     def stop(self):
-        if ros_version == '2':
-            if self.sub is not None:                
-                self.node.destroy_subscription(self.sub)
-                self.sub = None
-        else:
-            if self.sub is not None:
-                self.sub.unregister()
-                self.sub = None
+        self.sub.unregister()
 
     def start(self):
-        if ros_version == '2':
-            self.sub = self.node.create_subscription(ImageROS, self.topic, self.__callback, 1)
-        else:
-            self.sub = rospy.Subscriber(self.topic, ImageROS, self.__callback)
+        self.sub = rospy.Subscriber(self.topic, ImageROS, self.__callback)
 
     def getImage(self):
         self.lock.acquire()

@@ -117,8 +117,7 @@ def filter_classes(rgb, seg, classes_to_keep = [1, 7, 12, 13, 14, 15, 16, 17, 18
 
     # Use the mask to replace the corresponding pixels in the filtered images
     filtered_seg[mask] = seg[mask]
-    filtered_rgb[mask] = rgb[mask]        
-    
+    filtered_rgb[mask] = rgb[mask]
 
     return filtered_rgb, filtered_seg
 

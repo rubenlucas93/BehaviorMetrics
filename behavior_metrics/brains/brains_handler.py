@@ -3,7 +3,7 @@ import sys
 import subprocess
 import os
 import traceback
-from utils.logger import logger
+
 from abc import abstractmethod
 from albumentations import (
     Compose, Normalize, RandomRain, RandomBrightness, RandomShadow, RandomSnow, RandomFog, RandomSunFlare, Affine
@@ -34,34 +34,28 @@ class Brains(object):
     def load_brain(self, path, model=None):
 
         path_split = path.split("/")
-        framework = path_split[-3]
-        robot_type = path_split[-2]
+        robot_type = path_split[1]
         module_name = path_split[-1][:-3]  # removing .py extension
-        
-        
         if len(path_split) == 4:
-            import_name = 'brains.' + framework + '.' + robot_type  + '.' + module_name
+            framework = path_split[2]
+            import_name = 'brains.' + robot_type + '.' + framework + '.' + module_name
         else:
             import_name = 'brains.' + robot_type + '.' + module_name
 
-        logger.info("import_name:" + import_name)
-        
         if robot_type == 'CARLA':
+            # TODO (Ruben) we must adapt ddpg and ppo carla agents to this paradigm?
             module = importlib.import_module(import_name)
             Brain = getattr(module, 'Brain')
-            print('Brain: ', Brain)
-            if self.model:
-                self.active_brain = Brain(self.sensors, self.actuators, handler=self, model=self.model,
-                                          config=self.config)
-            else:
-                self.active_brain = Brain(self.sensors, self.actuators, handler=self, config=self.config)
-                print('config: ', self.sensors)
+            # if self.model:
+            #     self.active_brain = Brain(self.sensors, self.actuators, handler=self, model=self.model,
+            #                               config=self.config)
+            # else:
+            self.active_brain = Brain(self.sensors, self.actuators, handler=self, config=self.config)
         else:
             if import_name in sys.modules:  # for reloading sake
                 del sys.modules[import_name]
             module = importlib.import_module(import_name)
             Brain = getattr(module, 'Brain')
-            print('Brain: ', Brain)
             if robot_type == 'drone':
                 self.active_brain = Brain(handler=self, config=self.config)
             else:

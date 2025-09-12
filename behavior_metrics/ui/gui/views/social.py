@@ -13,14 +13,13 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
 import webbrowser
 
-#import ui.gui.resources.resources
+import ui.gui.resources.resources
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QSizePolicy, QSpacerItem,
                              QWidget)
-import os
-from utils.logger import logger
+
 __author__ = 'fqez'
 __contributors__ = []
 __license__ = 'GPLv3'
@@ -55,13 +54,12 @@ class SocialMedia(QWidget):
         main_layout = QHBoxLayout()
         self.setMaximumHeight(30)
         self.setContentsMargins(0, 0, 0, 0)
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
         main_layout.setContentsMargins(0, 0, 0, 0)
-        
-        
-        github_label = self.create_button('https://github.com/JdeRobot/BehaviorMetrics', self.gui_views_path + '/resources/assets/github.png')
-        twitter_label = self.create_button('https://twitter.com/jderobot', self.gui_views_path + '/resources/assets/twitter.png')
-        youtube_label = self.create_button('https://www.youtube.com/channel/UCgmUgpircYAv_QhLQziHJOQ', self.gui_views_path + '/resources/assets/youtube.png')
+
+        github_label = self.create_button('https://github.com/JdeRobot/BehaviorMetrics', ':/assets/github.png')
+        twitter_label = self.create_button('https://twitter.com/jderobot', ':/assets/twitter.png')
+        youtube_label = self.create_button('https://www.youtube.com/channel/UCgmUgpircYAv_QhLQziHJOQ',
+                                           ':/assets/youtube.png')
 
         horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 

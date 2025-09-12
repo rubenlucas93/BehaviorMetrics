@@ -47,8 +47,7 @@ Behaviors:
             ImageTranform: ''
         Type: 'CARLA'
     Simulation:
-        # World: configs/CARLA/CARLA_launch_files/town_02_anticlockwise_imitation_learning.launch
-        World: configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch.py
+        World: configs/CARLA/CARLA_launch_files/town_02_anticlockwise_imitation_learning.launch
         RandomSpawnPoint: False
     Dataset:
         In: '/tmp/my_bag.bag'

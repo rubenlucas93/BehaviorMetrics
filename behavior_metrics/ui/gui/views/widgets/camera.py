@@ -17,7 +17,7 @@ from threading import Lock
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
-import os
+
 __author__ = 'fqez'
 __contributors__ = []
 __license__ = 'GPLv3'
@@ -59,8 +59,7 @@ class CameraWidget(QWidget):
         self.image_label = QLabel()
         self.image_label.setMouseTracking(True)
 
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
-        self.image_label.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/logo_200.svg'))
+        self.image_label.setPixmap(QPixmap(':/assets/logo_200.svg'))
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setScaledContents(True)
 

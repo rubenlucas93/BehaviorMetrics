@@ -134,7 +134,7 @@ class ViewsController(QMainWindow):
     home_singal = pyqtSignal()
     robot_select_signal = pyqtSignal()
 
-    def __init__(self, parent, configuration, controller=None, node=None):
+    def __init__(self, parent, configuration, controller=None):
         """Constructor of the class.
 
         Arguments:
@@ -146,14 +146,12 @@ class ViewsController(QMainWindow):
         """
         
         QMainWindow.__init__(self)
-        self.node = node
         self.parent = parent
         self.controller = controller
         self.configuration = configuration
         self.main_view = None
         self.thread_gui = ThreadGUI(self)
         self.thread_gui.daemon = True
-        
 
     def show_title(self):
         """Shows the title view"""
@@ -209,7 +207,7 @@ class ViewsController(QMainWindow):
             delete_widgets_from(self.parent.main_layout)
         else:
             layout_configuration = None
-        self.main_view = MainView(layout_configuration, self.configuration, self.controller, self.parent, self.node)
+        self.main_view = MainView(layout_configuration, self.configuration, self.controller, self.parent)
         self.parent.main_layout.addWidget(self.main_view)
         self.fadein_animation()
         self.start_thread()

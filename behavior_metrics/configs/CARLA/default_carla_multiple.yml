@@ -26,17 +26,21 @@ Behaviors:
                 Speedometer_0:
                     Name: 'speedometer_0'
                     Topic: '/carla/ego_vehicle/speedometer'
+            wheel:
+              wheel:
+                Name: 'wheel'
+                Topic: '/carla/ego_vehicle/steering_angle'
         Actuators:
             CARLA_Motors:
                 Motors_0:
                     Name: 'motors_0'
                     Topic: '/carla/ego_vehicle/vehicle_control_cmd'
                     MaxV: 3
-                    MaxW: 0.3
+                    MaxW: 0.5
                     
         BrainPath: [
-            'brains/CARLA/tensorflow/brain_carla_bird_eye_deep_learning.py',
-            'brains/CARLA/pytorch/brain_carla_bird_eye_deep_learning_torch.py',
+            'brains/CARLA/brain_carla_ddpg.py',
+            'brains/CARLA/brain_carla_ppo.py',
             ]
         PilotTimeCycle: 50
         AsyncMode: True
@@ -57,8 +61,8 @@ Behaviors:
         Name: "Experiment name"
         Description: "Experiment description"
         UseWorldTimeouts: True
-        Timeout: [10, 10, 10, 10, 10, 10, 10] # for each world!
-        Repetitions: 5
+        Timeout: [1, 1, 1, 1, 1, 1, 1] # for each world!
+        Repetitions: 3
     Simulation:
         World: [
             configs/CARLA/CARLA_launch_files/town_01_anticlockwise_no_gui.launch,

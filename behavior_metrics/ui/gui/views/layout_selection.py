@@ -11,7 +11,6 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
-import os
 
 from collections import defaultdict
 
@@ -45,9 +44,9 @@ class InfoLabel(QLabel):
         QLabel.__init__(self, parent)
         self.description = description
         self.parent = parent
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
+
         self.setFixedSize(60, 60)
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
         self.setMouseTracking(True)
         self.setStyleSheet("""QToolTip {
                            background-color: rgb(51,51,51);
@@ -59,11 +58,11 @@ class InfoLabel(QLabel):
 
     def enterEvent(self, event):
         """ Mouse event when hover the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(60, 60, Qt.KeepAspectRatio))
 
     def leaveEvent(self, event):
         """Mouse event when exit the widget"""
-        self.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
+        self.setPixmap(QPixmap(':/assets/info_icon.png').scaled(50, 50, Qt.KeepAspectRatio))
 
     def mousePressEvent(self, event):
         """Mouse event when press the widget"""
@@ -305,7 +304,6 @@ class LayoutSelection(QWidget):
         self.parent = parent
         self.configuration = configuration
         self.parent.status_bar.showMessage('LMB for single selection ---- Ctrl + LMB for multiple selection')
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
         self.initUI()
 
     def initUI(self):
@@ -381,7 +379,7 @@ class LayoutSelection(QWidget):
         for c in positions:
             lbl = QLabel()
             lbl.setStyleSheet('border: 2px solid white')
-            lbl.setPixmap(QPixmap(self.gui_views_path + '/resources/assets/logo_200.svg'))
+            lbl.setPixmap(QPixmap(':/assets/logo_200.svg'))
             lbl.setAlignment(Qt.AlignCenter)
             greedy.addWidget(lbl, c[0], c[1], c[2], c[3])
         greedy.addWidget(FakeToolbar(), 0, 0)

@@ -16,7 +16,6 @@ from utils.constants import DATASETS_DIR, ROOT_PATH
 
 GENERATED_DATASETS_DIR = ROOT_PATH + '/' + DATASETS_DIR
 
-
 class Brain:
 
     def __init__(self, sensors, actuators, handler, config=None):
@@ -55,6 +54,9 @@ class Brain:
         self.vehicle = world.get_actors().filter('vehicle.*')[0]
 
         self.counter = 0
+
+        self.world = world
+        self.map = world.get_map()
 
         traffic_lights = world.get_actors().filter('traffic.traffic_light')
         traffic_speed_limits = world.get_actors().filter('traffic.speed_limit*')

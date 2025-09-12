@@ -11,7 +11,6 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
-import os
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QImage, QPixmap
@@ -28,7 +27,7 @@ class Logo(QWidget):
     def __init__(self):
         """Constructor of the class"""
         QWidget.__init__(self)
-        self.gui_views_path = os.path.dirname(os.path.realpath(__file__))[:-6]
+
         self.setFixedHeight(150)
         self.initUI()
 
@@ -36,7 +35,7 @@ class Logo(QWidget):
         """Setup the GUI elements"""
 
         main_layout = QVBoxLayout()
-        img = QImage(self.gui_views_path + '/resources/assets/logo_100.svg')
+        img = QImage(':/assets/logo_100.svg')
         pmap = QPixmap.fromImage(img).scaled(50, 50, Qt.KeepAspectRatio, )
         logo_label = QLabel()
         logo_label.setPixmap(pmap)

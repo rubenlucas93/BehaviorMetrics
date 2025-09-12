@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import time
-# import rospy
+import rospy
 import importlib
 import random
 
@@ -16,13 +16,6 @@ from utils.logger import logger
 from utils.constants import CARLA_TOWNS_TIMEOUTS
 from utils.traffic import TrafficManager
 from utils.constants import CARLA_TEST_SUITE_DIR, ROOT_PATH
-
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:
-    import rospy    
 
 TESTSUITES = ROOT_PATH + '/' + CARLA_TEST_SUITE_DIR
 

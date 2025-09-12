@@ -34,7 +34,8 @@ Behaviors:
                     MaxV: 3
                     MaxW: 0.3
                     
-        BrainPath: 'brains/CARLA/brain_carla_autopilot.py'
+        AsyncMode: True # Set to False to control simulator time
+        BrainPath: 'brains/CARLA/brain_carla_sb_autopilot.py'
         PilotTimeCycle: 300
         Parameters:
             ImageCropped: True
@@ -45,9 +46,9 @@ Behaviors:
             UseOptimized: True
             ImageTranform: ''
         Type: 'CARLA'
-        RandomSpawnPoint: False
     Simulation:
-        World: configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch
+        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
+        RandomSpawnPoint: False
     Dataset:
         In: '/tmp/my_bag.bag'
         Out: ''

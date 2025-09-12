@@ -1,15 +1,40 @@
-import os
-# import rospy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import rospy
 from nav_msgs.msg import Odometry
 import threading
 from math import asin, atan2, pi
 
-ros_version = os.environ.get('ROS_VERSION', '2')
-if ros_version == '2':
-    import rclpy
-    from rclpy.node import Node
-else:
-    import rospy
 
 def quat2Yaw(qw, qx, qy, qz):
     '''
@@ -96,10 +121,7 @@ def odometry2Pose3D(odom):
     pose.pitch = quat2Pitch(ori.w, ori.x, ori.y, ori.z)
     pose.roll = quat2Roll(ori.w, ori.x, ori.y, ori.z)
     pose.q = [ori.w, ori.x, ori.y, ori.z]
-    if ros_version == '2':
-        pose.timeStamp = odom.header.stamp.sec + (odom.header.stamp.nanosec * 1e-9)
-    else:
-        pose.timeStamp = odom.header.stamp.secs + (odom.header.stamp.nsecs * 1e-9)
+    pose.timeStamp = odom.header.stamp.secs + (odom.header.stamp.nsecs * 1e-9)
 
     return pose
 
@@ -130,7 +152,7 @@ class ListenerPose3d:
     '''
         ROS Pose3D Subscriber. Pose3D Client to Receive pose3d from ROS nodes.
     '''
-    def __init__(self, node: Node, topic: str):
+    def __init__(self, topic):
         '''
         ListenerPose3d Constructor.
 
@@ -138,7 +160,6 @@ class ListenerPose3d:
         @type topic: String
 
         '''
-        self.node = node
         self.topic = topic
         self.data = Pose3d()
         self.sub = None
@@ -165,24 +186,14 @@ class ListenerPose3d:
         Stops (Unregisters) the client.
 
         '''
-        if ros_version == '2':
-            if self.sub is not None:                
-                self.node.destroy_subscription(self.sub)
-                self.sub = None
-        else:
-            if self.sub is not None:
-                self.sub.unregister()
-                self.sub = None
+        self.sub.unregister()
 
     def start(self):
         '''
         Starts (Subscribes) the client.
 
         '''
-        if ros_version == '2':
-            self.sub = self.node.create_subscription(Odometry, self.topic, self.__callback, 10)
-        else:
-            self.sub = rospy.Subscriber(self.topic, Odometry, self.__callback)
+        self.sub = rospy.Subscriber(self.topic, Odometry, self.__callback)
 
     def getPose3d(self):
         '''

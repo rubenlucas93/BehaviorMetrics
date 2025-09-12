@@ -83,6 +83,7 @@ class Config:
         self.stats_out = None
 
         self.experiment_timeouts = None
+        self.max_waits = None
 
         self.task = None
         self.test_suite = None
@@ -130,7 +131,6 @@ class Config:
             self.real_time_update_rate = 1000
         if 'AsyncMode' in robot:
             self.async_mode = robot['AsyncMode']
-
         self.actuators = robot['Actuators']
         self.sensors = robot['Sensors']
 
@@ -154,6 +154,8 @@ class Config:
         if 'Experiment' in config_data['Behaviors']:
             self.experiment_name = config_data['Behaviors']['Experiment']['Name']
             self.experiment_description = config_data['Behaviors']['Experiment']['Description']
+            if 'MaxWaits' in config_data['Behaviors']['Experiment']:
+                self.max_waits = config_data['Behaviors']['Experiment']['MaxWaits']
             if 'Timeout' in config_data['Behaviors']['Experiment']:
                 self.experiment_timeouts = config_data['Behaviors']['Experiment']['Timeout']
                 self.use_world_timeouts = config_data['Behaviors']['Experiment']['UseWorldTimeouts']

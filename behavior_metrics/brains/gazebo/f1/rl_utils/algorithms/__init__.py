@@ -31,7 +31,7 @@ class InferencerFactory:
             return brain
 
         if algorithm == AlgorithmsType.PPO.value:
-            brain = PPOF1(8, 2, 0,
+            brain = PPOF1(7, 2, 0,
                                  0, 0, 0, 0, True, 0.00001)
 
             # Init Agents

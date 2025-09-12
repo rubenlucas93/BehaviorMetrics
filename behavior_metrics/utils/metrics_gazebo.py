@@ -18,10 +18,10 @@ import numpy as np
 import shutil
 import time
 import os
-# import rosbag
+import rosbag
 
 from datetime import datetime
-# from bagpy import bagreader
+from bagpy import bagreader
 from utils.logger import logger
 
 from scipy.optimize import fmin, dual_annealing
