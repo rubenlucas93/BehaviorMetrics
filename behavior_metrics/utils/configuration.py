@@ -161,7 +161,7 @@ class Config:
                 self.use_world_timeouts = config_data['Behaviors']['Experiment']['UseWorldTimeouts']
             if 'Repetitions' in config_data['Behaviors']['Experiment']:
                 self.experiment_repetitions = config_data['Behaviors']['Experiment']['Repetitions']
-        
+            self.client_port = config_data['Behaviors']['Experiment']['clientPort']
         if 'RandomSpawnPoint' in config_data['Behaviors']['Simulation']:
             self.experiment_random_spawn_point = config_data['Behaviors']['Simulation']['RandomSpawnPoint']
         if 'SpawnPoints' in config_data['Behaviors']['Simulation']:

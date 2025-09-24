@@ -1,0 +1,10 @@
+Time,header.seq,header.stamp.secs,header.stamp.nsecs,header.frame_id,crossed_lane_markings_0
+68.026864565,1,68,26864565,ego_vehicle/lane_invasion,1
+165.026866011,2,165,26866011,ego_vehicle/lane_invasion,10
+165.426866017,3,165,426866017,ego_vehicle/lane_invasion,10
+165.826866023,4,165,826866023,ego_vehicle/lane_invasion,10
+165.976866025,5,165,976866025,ego_vehicle/lane_invasion,10
+166.426866032,6,166,426866032,ego_vehicle/lane_invasion,10,1
+166.626866035,7,166,626866035,ego_vehicle/lane_invasion,1
+167.026866041,8,167,26866041,ego_vehicle/lane_invasion,1
+167.326866045,9,167,326866045,ego_vehicle/lane_invasion,1,10

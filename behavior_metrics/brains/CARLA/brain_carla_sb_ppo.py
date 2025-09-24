@@ -294,18 +294,11 @@ class Brain:
         distance_run = episode_duration * self.avg_speed
         if self.controller.lap_completed(distance_run):
             print("episode finished")
-            self.car.apply_control(carla.VehicleControl(throttle=0,
-                                                        brake=1,
-                                                        steer=0))
-            target_velocity = carla.Vector3D(
-                x= 0,
-                y= 0,
-                z= 0  # Typically 0 unless you want vertical motion
-            )
-            self.car.set_target_velocity(target_velocity)
+            self.controller.stop_car()
             return True
-        # if not self.step % 200:
-        #     print(distance_run)
+        if not self.step % 200:
+            print(self.car.get_transform())
+            print(distance_run)
 
         # TODO integrate with environment
         # observation, reward, done, info = self.env.step(action, self.step)

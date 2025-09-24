@@ -43,21 +43,21 @@ class InferenceExecutorValidator(BaseModel):
 class Brain:
 
     def __init__(self, sensors, actuators, handler, config=None):
-        self.client = carla.Client(
-            "localhost",
-            2000,
-        )
-        self.client.set_timeout(10.0)
-        print(f"\n maps in carla 0.9.13: {self.client.get_available_maps()}\n")
         self.controller = handler.controller
 
+        time.sleep(10)
+        self.client = carla.Client(
+            "localhost",
+            self.controller.client_port
+        )
+
+        self.client.set_timeout(10.0)
+        print(f"\n maps in carla 0.9.13: {self.client.get_available_maps()}\n")
+
         self.world = self.client.get_world()
-        # print(self.world.get_map.name)
         self.map = self.world.get_map()
         all_actors = self.world.get_actors()
-        # print(all_actors)
         vehicles = all_actors.filter("vehicle.*")
-
         if len(vehicles) > 0:
             self.car = vehicles[0]
         else:
@@ -107,7 +107,7 @@ class Brain:
         # self.previous_timestamp = 0
         # self.previous_image = 0
 
-        self.previous_states =  [0] * 25
+        self.previous_states = [0] * 45
 
         self.tensorboard = ModifiedTensorBoard(
             log_dir=f"logs/Tensorboard/ddpg/{time.strftime('%Y%m%d-%H%M%S')}"
@@ -137,8 +137,8 @@ class Brain:
 
         camera_transform = carla.Transform(carla.Location(x=-2, y=0.0, z=3),
                         carla.Rotation(pitch=-3, yaw=0, roll=0.0))
-        self.fov = 90
-        self.n_points = 10
+        self.fov=90
+        self.n_points = 20
         self.lane_detector = LaneDetector(self.car,
                                           self.map,
                                           self.world,
@@ -151,67 +151,6 @@ class Brain:
         self.ddpg_agent = DDPG.load(inference_file)
         action_noise = NormalActionNoise(mean=np.zeros(2), sigma=0.0 * np.ones(2))
         self.ddpg_agent.action_noise = action_noise
-        # self.lane_detector.set_init_pose()
-
-        # location = self.car.get_transform()
-        # print(location)
-
-        # Town01 multiple
-        # location = carla.Transform(
-        #     carla.Location(
-        #         x=92.363960,
-        #         y=45.652158,
-        #         z=1,
-        #     ),
-        #     carla.Rotation(
-        #         pitch=0.142516,
-        #         yaw=-87.689893,
-        #         roll=0.038263,
-        #     ),
-        # )
-
-        # location = carla.Transform(
-        #     carla.Location(
-        #         x=152.093750,
-        #         y=326.573151,
-        #         z=1,
-        #     ),
-        #     carla.Rotation(
-        #         pitch=0.093799,
-        #         yaw=-179.874603,
-        #         roll=-0.080688,
-        #     ),
-        # )
-
-        # Town02 multiple
-        # location = carla.Transform(
-        #     carla.Location(
-        #         x=49.999569,
-        #         y=303.000885,
-        #         z=1,
-        #     ),
-        #     carla.Rotation(
-        #         pitch=0.06,
-        #         yaw=-179.999954,
-        #         roll=-0.006836
-        #     ),
-        # )
-
-        ## Town04 multiple
-        # location = carla.Transform(
-        #     carla.Location(
-        #         x=389.385938,
-        #         y=-179.152158,
-        #         z=1.457793,
-        #     ),
-        #     carla.Rotation(
-        #         pitch=0.082516,
-        #         yaw=270.889893,
-        #         roll=0.078263,
-        #     ),
-        # )
-
-        # self.car.set_transform(location)
 
         time.sleep(2)
 
@@ -251,18 +190,9 @@ class Brain:
         distance_run = episode_duration * self.avg_speed
         if self.controller.lap_completed(distance_run):
             print("episode finished")
-            self.car.apply_control(carla.VehicleControl(throttle=0,
-                                                        brake=1,
-                                                        steer=0))
-            target_velocity = carla.Vector3D(
-                x= 0,
-                y= 0,
-                z= 0  # Typically 0 unless you want vertical motion
-            )
-            self.car.set_target_velocity(target_velocity)
-            return True
-        if not self.step % 200:
-            print(distance_run)
+            self.controller.stop_car()
+            return True        # if not self.step % 200:
+        #     print(distance_run)
 
         # TODO integrate with environment
         # observation, reward, done, info = self.env.step(action, self.step)
@@ -305,16 +235,16 @@ class Brain:
         sensor_time = time.time()
         self.tensorboard.update_times(sensor_time - self.previous_time, "sensor")
 
-        centers, image_processed, center_distance, misalignment = self.lane_detector.process_image(image)
+        centers, image_processed, center_distance, _ = self.lane_detector.process_image(image)
 
         perception_time = time.time()
         self.tensorboard.update_times(perception_time - sensor_time, "perception")
 
-        v = self.car.get_velocity()
-        speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
-        w_angle = self.car.get_control().steer
-
-        # final_curvature = self.lane_detector.calculate_max_curveture_from_centers(centers)
+        # speed = self.speedometer.getSpeedometer().data
+        # w_angle = self.wheel.getWheelAngle()
+        # state.append(speed)
+        # state.append(w_angle)
+        # final_curvature = self.lane_detector.calculate_max_curveture_from_centers(state)
 
         state, x_centers_normalized, y_normalized = self.lane_detector.normalize_centers(centers)
         half_image = len(x_centers_normalized)//2
@@ -322,26 +252,22 @@ class Brain:
         x_normalized = np.array(x_centers_normalized)
         deviated_points = np.sum(np.abs(x_normalized - 0.5) > 0.15)
 
-        # print(deviated_points)
-
-        # speed = self.speedometer.getSpeedometer().data
-        # w_angle = self.wheel.getWheelAngle()
-
         mean_curvature = self.lane_detector.average_curvature_from_centers(centers)
         v_goal_now = self.lane_detector.calculate_v_goal(mean_curvature, center_distance, deviated_points)
-        # print(f"v_goal => {v_goal_now}")
         self.v_goal_buffer.append(v_goal_now)
         v_goal = sum(self.v_goal_buffer) / len(self.v_goal_buffer)
 
-        state.append(speed/25)
+        v = self.car.get_velocity()
+        speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
+        w_angle = self.car.get_control().steer
+
+        state.append(speed / 25)
         state.append(w_angle)
         # state.append(final_curvature)
         # state.append(misalignment)
         state.append(action[0])
         state.append(action[1])
-        # state.append(close_points_dev)
-        # state.append(deviated_points)
-        state.append(v_goal/25)
+        state.append(v_goal / 25)
 
         self.previous_states = state
 

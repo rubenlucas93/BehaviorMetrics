@@ -47,12 +47,12 @@ Behaviors:
             ImageTranform: ''
         Type: 'CARLA'
     Simulation:
-        World: configs/CARLA/CARLA_launch_files/town_01_clockwise.launch
+#        World: configs/CARLA/CARLA_launch_files/town_01_clockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch
 #        World: configs/CARLA/CARLA_launch_files/town_04_ruben.launch
 #        World: configs/CARLA/CARLA_launch_files/town_05_anticlockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch
+        World: configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch
         RandomSpawnPoint: False
     Dataset:
         In: '/tmp/my_bag.bag'

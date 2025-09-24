@@ -132,18 +132,22 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
 
     os.makedirs(experiments_starting_time_str, exist_ok=True)
     experiments_metrics_and_titles = [
-        # {
-        #     'metric': 'line_speeds_by_waypoint',
-        #     'title': 'speed by waypoint'
-        # },
-        # {
-        #     'metric': 'histogram_speeds',
-        #     'title': 'Experiment speed histograms'
-        # },
-        # {
-        #     'metric': 'histogram_position_deviations',
-        #     'title': 'Experiment position_deviations histograms'
-        # },
+        {
+            'metric': 'line_speeds_by_waypoint',
+            'title': 'speed by waypoint'
+        },
+        {
+            'metric': 'histogram_speeds',
+            'title': 'Experiment speed histograms'
+        },
+        {
+            'metric': 'histogram_position_deviations',
+            'title': 'Experiment position_deviations histograms'
+        },
+        {
+            'metric': 'histogram_position_deviations_with_sign',
+            'title': 'Experiment position_deviations_with_sign histograms'
+        },
         {
             'metric': 'experiment_total_simulated_time',
             'title': 'Experiment total simulated time per experiment'
@@ -199,11 +203,11 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
         {
             'metric': 'mean_brain_iterations_simulated_time',
             'title': 'Mean brain iterations simulated time per experiment'
-        }, 
+        },
         {
             'metric': 'gpu_mean_inference_time',
             'title': 'GPU mean inference time per experiment'
-        }, 
+        },
         {
             'metric': 'mean_brain_iterations_real_time',
             'title': 'Mean brain iterations real time per experiment'
@@ -264,7 +268,7 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
             'metric': 'suddenness_distance_speed_per_km',
             'title': 'Suddenness distance speed per km per experiment'
         },
-        
+
         {
             'metric': 'completed_laps',
             'title': 'Completed laps per experiment'

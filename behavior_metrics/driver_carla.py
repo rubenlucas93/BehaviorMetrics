@@ -146,6 +146,10 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
             'title': 'Experiment position_deviations histograms'
         },
         {
+            'metric': 'histogram_position_deviations_with_sign',
+            'title': 'Experiment position_deviations_with_sign histograms'
+        },
+        {
             'metric': 'experiment_total_simulated_time',
             'title': 'Experiment total simulated time per experiment'
         },
@@ -347,6 +351,7 @@ def main():
                 experiment_counter = 0
                 experiments_elapsed_times = {'experiment_counter': [], 'elapsed_time': []}
                 experiments_information = {'world_counter': {}}
+                client_port = app_configuration.client_port
                 for world_counter, world in enumerate(app_configuration.current_world):
                     experiments_information['world_counter'][world_counter] = {'brain_counter': {}}
                     for brain_counter, brain in enumerate(app_configuration.brain_path):
@@ -360,7 +365,7 @@ def main():
                                 logger.info("Experiment attempt: " + str(experiment_attempts+1))
                                 logger.info(f"Running model {app_configuration.brain_path[brain_counter]} on world {world}")
                                 current_experiment_starting_time = time.time()
-                                success = os.system("python3 script_manager_carla.py -c " + config_data['config'][0] + " -s -world_counter " + str(world_counter) + " -brain_counter " + str(brain_counter) + " -repetition_counter " + str(repetition_counter))
+                                success = os.system("python3 script_manager_carla.py -c " + config_data['config'][0] + " -s -world_counter " + str(world_counter) + " -brain_counter " + str(brain_counter) + " -repetition_counter " + str(repetition_counter) + " -client_port " + str(client_port))
                                 if success != 0:
                                     root = './'
                                     folders = list(os.walk(root))[1:]

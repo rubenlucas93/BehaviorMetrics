@@ -34,7 +34,7 @@ ros:
 
 inference:
   ddpg:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_baselines/20250828-092621/model_1020000_steps.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_ddpg_auto_carla_baselines/20250921-215610/model_710000_steps.zip
 
 algorithm:
   ddpg:

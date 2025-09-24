@@ -69,6 +69,12 @@ def check_args(argv):
                         help='{}Repetition counter{}'.format(
                             Colors.OKBLUE, Colors.ENDC))
 
+    parser.add_argument('-client_port',
+                        type=int,
+                        action='append',
+                        help='{}Carla client port{}'.format(
+                            Colors.OKBLUE, Colors.ENDC))
+
     args = parser.parse_args()
 
     config_data = {'config': None, 'gui': None, 'tui': None, 'script': None, 'random': False, 'world_counter': 0, 'brain_counter': 0, 'repetition_counter': 0}
@@ -101,6 +107,9 @@ def check_args(argv):
     if args.repetition_counter:
         config_data['repetition_counter'] = args.repetition_counter
 
+    if args.client_port:
+        config_data['client_port'] = args.client_port
+
     return config_data
 
 def main():
@@ -110,6 +119,7 @@ def main():
     world_counter = int(config_data['world_counter'][0])
     brain_counter = int(config_data['brain_counter'][0])
     repetition_counter = int(config_data['repetition_counter'][0])
+    client_port = config_data['client_port']
 
     logger.info(str(world_counter) + ' ' + str(brain_counter) + ' ' + str(repetition_counter))
 
@@ -122,7 +132,7 @@ def main():
         environment.launch_env(world, random_spawn_point=app_configuration.experiment_random_spawn_point, carla_simulator=True, config_spawn_point=app_configuration.spawn_points[world_counter][repetition_counter])
     else:
         environment.launch_env(world, random_spawn_point=app_configuration.experiment_random_spawn_point, carla_simulator=True)
-    controller = ControllerCarla()
+    controller = ControllerCarla(port=client_port)
 
     # Launch control
     pilot = PilotCarla(app_configuration, controller, brain, experiment_model=experiment_model)

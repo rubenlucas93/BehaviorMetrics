@@ -4,14 +4,14 @@ import math
 # Connect to CARLA
 client = carla.Client("localhost", 2000)
 client.set_timeout(5.0)
-world = client.load_world("Town06")
+world = client.load_world("Town05")
 map = world.get_map()
 
 # Starting location
 location = carla.Transform(
-    carla.Location(x=180.999569, y=303.000885, z=1),
-    carla.Rotation(pitch=0.06, yaw=0.999954, roll=-0.006836)
-)
+            carla.Location(x=-9.106637, y=106.701706, z=1),
+            carla.Rotation(pitch=0.485975, yaw=90.032097, roll=-0.006836)
+        )
 
 # Get closest waypoint
 start_wp = map.get_waypoint(location.location, project_to_road=True, lane_type=carla.LaneType.Driving)
@@ -38,7 +38,7 @@ current_wp = start_wp
 
 num_visited = 0
 while True:
-    next_wps = current_wp.next(1.0)  # 1 meter ahead
+    next_wps = current_wp.previous(1.0)  # 1 meter ahead
     if not next_wps:
         break
 

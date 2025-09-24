@@ -335,8 +335,8 @@ def plot_histograms_comparison_separated(comp_1, comp_2, comp_3):
     plt.show()
     # plt.savefig('speed_comparison.png')  # Uncomment to save the plot
 
-def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, comp_3=None, x_axis=None, x_bins=10,
-                                     multiplier=1):
+def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, comp_3=None, x_axis=None,
+                                     x_bins=10, x_around_0=False, multiplier=1):
     """
     Plot histograms for precomputed list-based metrics like 'speeds'.
     comp_2 and comp_3 are optional.
@@ -371,6 +371,10 @@ def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, 
         x_axis = [min_x * 0.9, max_x * 1.1]
     else:
         min_x, max_x = x_axis
+
+    if x_around_0:
+        max_abs = max(min_x, max_x)
+        x_axis = [-max_abs, max_abs]
 
     max_y = max(max_y_vals) if max_y_vals else 1
 

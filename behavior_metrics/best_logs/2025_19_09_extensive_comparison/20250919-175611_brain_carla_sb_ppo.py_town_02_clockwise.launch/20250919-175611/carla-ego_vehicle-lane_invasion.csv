@@ -1,0 +1,2 @@
+Time,header.seq,header.stamp.secs,header.stamp.nsecs,header.frame_id,crossed_lane_markings_0
+155.61047504,1,155,610475040,ego_vehicle/lane_invasion,10
