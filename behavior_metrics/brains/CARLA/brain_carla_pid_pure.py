@@ -1,16 +1,22 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import csv
+import cv2
 import math
 import numpy as np
 import threading
 import time
+from PIL import Image
+from sklearn.linear_model import LinearRegression
+import carla
+from collections import deque
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from stable_baselines3 import SAC
-import carla
-from collections import deque
+from stable_baselines3 import PPO
+
+import torch
+from collections import Counter
 
 import random
 import yaml
@@ -27,10 +33,47 @@ from stable_baselines3.common.noise import NormalActionNoise
 
 GENERATED_DATASETS_DIR = ROOT_PATH + '/' + DATASETS_DIR
 
+NO_DETECTED = 1
+
+
 from pydantic import BaseModel
 class InferenceExecutorValidator(BaseModel):
     settings: dict
     inference: dict
+
+from stable_baselines3.common.policies import ActorCriticPolicy
+import torch.nn as nn
+
+class PIDController:
+    def __init__(self, Kp, Ki, Kd, dt=0.05, output_limits=(-1.0, 1.0)):
+        self.Kp = Kp
+        self.Ki = Ki
+        self.Kd = Kd
+        self.dt = dt
+        self.output_limits = output_limits
+        self.integral = 0.0
+        self.prev_error = 0.0
+
+    def reset(self):
+        self.integral = 0.0
+        self.prev_error = 0.0
+
+    def step(self, error):
+        # Proportional
+        P = self.Kp * error
+
+        # Integral
+        self.integral += error * self.dt
+        I = self.Ki * self.integral
+
+        # Derivative
+        D = self.Kd * (error - self.prev_error) / self.dt
+
+        output = P + I + D
+        self.prev_error = error
+
+        # Clamp
+        return np.clip(output, self.output_limits[0], self.output_limits[1])
 
 class Brain:
 
@@ -45,12 +88,18 @@ class Brain:
 
         self.world = self.client.get_world()
         self.map = self.world.get_map()
+        print(self.map.name)
         all_actors = self.world.get_actors()
+        print(all_actors)
         vehicles = all_actors.filter("vehicle.*")
         if len(vehicles) > 0:
             self.car = vehicles[0]
         else:
             print("No vehicles found in the world.")
+
+        # self.lidar = all_actors.filter("sensor.lidar.ray_cast")[0]
+        # self.lidar.listen(self.process_lidar_data)
+
         # location = self.car.get_transform()
         # spectator = self.world.get_spectator()
         # spectator_location = carla.Transform(
@@ -60,13 +109,17 @@ class Brain:
 
         self.last_action = [0, 0]
         self.last_state = [0, 0, 0, 0, 0]
+        self.detection_mode = "carla_perfect"
         self.camera = sensors.get_camera('camera_0')
         self.camera_1 = sensors.get_camera('camera_1')
         self.camera_2 = sensors.get_camera('camera_2')
         self.camera_3 = sensors.get_camera('camera_3')
         self.speedometer = sensors.get_speed('speedometer_0')
         self.wheel = sensors.get_wheel('wheel')
-        self.v_goal_buffer = deque(maxlen=10)
+        self.v_goal_buffer = deque(maxlen=1)
+
+        self.start_time = time.time()
+        self.avg_speed = 0
 
         self.pose = sensors.get_pose3d('pose3d_0')
 
@@ -84,49 +137,48 @@ class Brain:
         self.cont = 0
         self.iteration = 0
         self.step = 0
-        self.previous_states = [0] * 25
+        self.previous_states = [0] * 20
+        self.speed = 0
+        self.v_goal = 0
 
-        self.avg_speed = 0
-        self.start_time = time.time()
-
+        self.sync_mode = True
+        self.show_images = False
         # self.detection_mode = 'lane_detector'
 
         # self.previous_timestamp = 0
         # self.previous_image = 0
 
-        self.previous_v = None
-        self.previous_w = None
-        self.previous_w_normalized = None
-
         self.tensorboard = ModifiedTensorBoard(
-            log_dir=f"logs/Tensorboard/sac/{time.strftime('%Y%m%d-%H%M%S')}"
+            log_dir=f"logs/Tensorboard/ppo/{time.strftime('%Y%m%d-%H%M%S')}"
         )
 
         args = {
-            'algorithm': 'sac',
+            'algorithm': 'ppo',
             'environment': 'simple',
             'agent': 'f1',
-            'filename': 'brains/CARLA/config/config_inference_followlane_sb_sac_f1_carla_2.yaml'
+            'filename': 'brains/CARLA/config/config_inference_followlane_sb_ppo_f1_carla.yaml'
         }
+
 
         f = open(args['filename'], "r")
         read_file = f.read()
 
         config_file = yaml.load(read_file, Loader=yaml.FullLoader)
-
         inference_params = {
             "settings": self.get_settings(config_file),
             "inference": self.get_inference(config_file, args['algorithm']),
         }
 
-        # self.x_row = [350, 380, 410, 460, 500] # TODO Read from config
         self.x_row = self.get_states_rows(config_file)
+
+        params = InferenceExecutorValidator(**inference_params)
+        inference_file = params.inference["params"]["inference_tf_model_name"]
 
         camera_transform = carla.Transform(carla.Location(x=-2, y=0.0, z=3),
                         carla.Rotation(pitch=-3, yaw=0, roll=0.0))
+
         self.fov = 90
         self.n_points = 10
-
         self.lane_detector = LaneDetector(self.car,
                                           self.map,
                                           self.world,
@@ -135,13 +187,13 @@ class Brain:
                                           self.fov,
                                           self.n_points)
 
-        params = InferenceExecutorValidator(**inference_params)
-        inference_file = params.inference["params"]["inference_tf_model_name"]
-        # self.lane_detector.set_init_pose()
-
         self.inference_distance = self.lane_detector.inference_distances[self.map.name]
 
-        self.sac_agent = SAC.load(inference_file)
+        self.steer_pid = PIDController(Kp=2, Ki=0.05, Kd=1, output_limits=(-1, 1))
+        # The speed PID seems reasonable but can be fine-tuned if needed
+        self.speed_pid = PIDController(Kp=1.3, Ki=0.05, Kd=0.1, output_limits=(-1.0, 1.0))
+        # self.ppo_agent.action_noise = action_noise
+        # self.lane_detector.set_init_pose()
 
         ## Town04 multiple
         # location = carla.Transform(
@@ -161,6 +213,9 @@ class Brain:
 
         time.sleep(2)
 
+    def get_states_rows(self, config_file: dict) -> dict:
+        return  config_file["states"][config_file["settings"]["states"]][0]
+
     def get_inference(self, config_file: dict, input_inference: str) -> dict:
         return {
             "name": input_inference,
@@ -172,9 +227,6 @@ class Brain:
             "name": "settings",
             "params": config_file["settings"],
         }
-
-    def get_states_rows(self, config_file: dict) -> dict:
-        return  config_file["states"][config_file["settings"]["states"]][0]
 
     def update_frame(self, frame_id, data):
         """Update the information to be shown in one of the GUI's frames.
@@ -188,6 +240,79 @@ class Brain:
     def update_pose(self, pose_data):
         self.handler.update_pose3d(pose_data)
 
+    def lidar_point_to_world(self, lidar_detection):
+        # Get the sensor's transformation
+        sensor_transform = self.lidar.get_transform()
+        sensor_location = sensor_transform.location
+        sensor_rotation = sensor_transform.rotation
+
+        # Extract relative point from lidar detection
+        relative_point = lidar_detection.point  # Example: (x, y, z) in sensor's frame
+
+        # Convert sensor rotation to radians
+        yaw = math.radians(sensor_rotation.yaw)
+        pitch = math.radians(sensor_rotation.pitch)
+        roll = math.radians(sensor_rotation.roll)
+
+        # Rotation matrix for the sensor
+        rotation_matrix = np.array([
+            [
+                math.cos(yaw) * math.cos(pitch),
+                math.cos(yaw) * math.sin(pitch) * math.sin(roll) - math.sin(yaw) * math.cos(roll),
+                math.cos(yaw) * math.sin(pitch) * math.cos(roll) + math.sin(yaw) * math.sin(roll)
+            ],
+            [
+                math.sin(yaw) * math.cos(pitch),
+                math.sin(yaw) * math.sin(pitch) * math.sin(roll) + math.cos(yaw) * math.cos(roll),
+                math.sin(yaw) * math.sin(pitch) * math.cos(roll) - math.cos(yaw) * math.sin(roll)
+            ],
+            [
+                -math.sin(pitch),
+                math.cos(pitch) * math.sin(roll),
+                math.cos(pitch) * math.cos(roll)
+            ]
+        ])
+
+        # Transform the relative point to the world frame
+        relative_vector = np.array([relative_point.x, relative_point.y, relative_point.z])
+        world_vector = np.dot(rotation_matrix, relative_vector)
+
+        # Add the sensor's global location
+        world_x = sensor_location.x + world_vector[0]
+        world_y = sensor_location.y + world_vector[1]
+        world_z = sensor_location.z + world_vector[2]
+
+        return carla.Location(x=world_x, y=world_y, z=world_z)
+
+    def process_lidar_data(self, data):
+        car_location = self.car.get_location()
+        min_distance = float('inf')
+
+        # Define the range of lateral (Y) distance for "front" filtering (optional)
+        lateral_limit = 2.0  # 2 meters to the left and right of the vehicle's center
+
+        # Define the angle range for the "cone" of front-facing points
+        front_angle_limit = 30.0  # 30 degrees (left and right) from the center of the vehicle
+
+        for detection in data:
+            # Transform LiDAR point to world coordinates
+            world_point = self.lidar_point_to_world(detection)
+
+            # Get the angle of the point relative to the vehicle's forward direction
+            angle = math.degrees(math.atan2(world_point.y - car_location.y, world_point.x - car_location.x))
+
+            # Only consider points ahead of the vehicle and within the cone
+            # if world_point.x > car_location.x and abs(angle) <= front_angle_limit and abs(world_point.y) < lateral_limit:
+            if True:
+                # Compute distance to the car
+                distance = car_location.distance(world_point)
+                if distance < min_distance:
+                    min_distance = distance
+
+                # Visualize the LiDAR point in front of the vehicle
+        self.lidar_front_distance = min_distance if not math.isinf(min_distance) else 100
+        # print(f"Closest object in front of the vehicle is {min_distance} meters away.")
+
     def execute(self):
         if self.step == 0:
             self.start_time = time.time()
@@ -198,40 +323,18 @@ class Brain:
             print("episode finished")
             self.controller.stop_car()
             return True
-        # if not self.step % 200:
-        #     print(distance_run)
+        if not self.step % 200:
+            print(self.car.get_transform())
+            print(distance_run)
 
-        # TODO integrate with environment
-        # observation, reward, done, info = self.env.step(action, self.step)
         self.step += 1
 
         now = time.time()
-        # difference = (now - self.previous_time)
-        # to_wait = 0.05 - difference
-        # if to_wait > 0:
-        #     time.sleep(to_wait)
-        # now = time.time()
+
 
         fps = 1 / (now - self.previous_time)
         self.previous_time = now
         self.tensorboard.update_fps(fps)
-
-        [action, _] = self.sac_agent.predict(np.array(self.previous_states), deterministic=True)
-
-        # self.motors.sendThrottle(action[0]*0.7) # A REVISAR POR QUE HAY QUE ESCALAR ESTO
-        # self.motors.sendSteer(action[1])
-        # self.motors.sendBrake(action[2] if action[2] > 0.5 else 0)
-
-        if float(action[0]) > 0:
-            throttle = float(action[0])
-            brake = 0
-        else:
-            brake = -float(action[0])
-            throttle = 0
-
-        self.car.apply_control(carla.VehicleControl(throttle=throttle,
-                                                    brake=brake,
-                                                    steer=float(action[1])))
 
         image = self.camera.getImage().data
         image_1 = self.camera_1.getImage().data
@@ -241,7 +344,7 @@ class Brain:
         sensor_time = time.time()
         self.tensorboard.update_times(sensor_time - self.previous_time, "sensor")
 
-        centers, image_processed, center_distance,_ = self.lane_detector.process_image(image)
+        centers, image_processed, center_distance, _ = self.lane_detector.process_image(image)
 
         perception_time = time.time()
         self.tensorboard.update_times(perception_time - sensor_time, "perception")
@@ -253,8 +356,8 @@ class Brain:
         # final_curvature = self.lane_detector.calculate_max_curveture_from_centers(state)
 
         v = self.car.get_velocity()
-        speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
-        w_angle = self.car.get_control().steer
+        self.speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
+        self.w_angle = self.car.get_control().steer
 
         state, x_centers_normalized, y_normalized = self.lane_detector.normalize_centers(centers)
         half_image = len(x_centers_normalized)//2
@@ -265,21 +368,52 @@ class Brain:
         mean_curvature = self.lane_detector.average_curvature_from_centers(centers)
         v_goal_now = self.lane_detector.calculate_v_goal(mean_curvature, center_distance, deviated_points)
         self.v_goal_buffer.append(v_goal_now)
-        v_goal = sum(self.v_goal_buffer) / len(self.v_goal_buffer)
+        self.v_goal = sum(self.v_goal_buffer) / len(self.v_goal_buffer)
 
-        state.append(speed / 25)
-        state.append(w_angle)
-        # state.append(final_curvature)
-        # state.append(misalignment)
-        state.append(action[0])
-        state.append(action[1])
-        # state.append(close_points_dev)
-        # state.append(deviated_points)
-        state.append(v_goal / 25)
+        # --- Pure Pursuit Controller ---
+        # Choose a lookahead point index.
+        # For example, the 5th point (index 4) provides a good balance between responsiveness and stability.
+        LOOKAHEAD_POINT_INDEX = 4
+
+        # Check if there are enough points to use the lookahead index.
+        if len(x_centers_normalized) > LOOKAHEAD_POINT_INDEX:
+            target_x = x_centers_normalized[LOOKAHEAD_POINT_INDEX]
+            target_y = y_normalized[LOOKAHEAD_POINT_INDEX]
+
+            # Calculate the angle to the target point from the car's perspective.
+            # The car is at the bottom-center of the image, (0.5, 1.0).
+            # The `(1.0 - target_y)` handles the inverted y-axis.
+            error_angle = math.atan2(target_x - 0.5, 1.0 - target_y)
+
+            # Use a gain to convert the angle to a steering command.
+            k_pure_pursuit = 1.2  # Tune this gain for aggressiveness.
+            steer = k_pure_pursuit * error_angle
+            steer = np.clip(steer, -1.0, 1.0)
+        else:
+            # If not enough points, maintain current steering or set to a safe value.
+            steer = self.car.get_control().steer  # Maintain last known steer
+
+        speed_error = (self.v_goal - self.speed) / 15  # normalize by max speed
+        throttle_cmd = self.speed_pid.step(speed_error)
+        # print(f"s {speed_error}")
+        # print(throttle_cmd)
+
+        if throttle_cmd > 0:
+            throttle = throttle_cmd
+            brake = 0
+        else:
+            throttle = 0
+            brake = -throttle_cmd
+
+        self.car.apply_control(carla.VehicleControl(
+            throttle=throttle,
+            brake=brake,
+            steer=steer
+        ))
 
         self.previous_states = state
 
-        self.tensorboard.update_actions(action, self.step)
+        #self.tensorboard.update_actions(action, self.step)
 
         # To calculate distance to center on inference we use the 5 lowest points to reduce curve noise
         # dists = np.mean(state[:6)  # Take 7 elements, apply abs, then mean
@@ -290,7 +424,7 @@ class Brain:
         #
         # self.tensorboard.update_state(state, self.step)
 
-        self.avg_speed = self.avg_speed + (speed - self.avg_speed) / self.step
+        self.avg_speed = self.avg_speed + (self.speed - self.avg_speed) / self.step
 
         # print(str(action))
         # print("----")
@@ -307,4 +441,3 @@ class Brain:
 
         display_time = time.time()
         self.tensorboard.update_times(display_time - action_time, "display")
-        return False

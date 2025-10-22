@@ -34,8 +34,8 @@ ros:
 
 inference:
   sac:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20250908-142121/model_1260000_steps_20250909-175514.zip
-
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20251007-000808/best_model.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20251009-195505/model_1430000_steps_20251011-040410.zip
 algorithm:
   sac:
     gamma: 0.9

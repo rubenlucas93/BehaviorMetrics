@@ -106,7 +106,7 @@ class Brain:
             'algorithm': 'sac',
             'environment': 'simple',
             'agent': 'f1',
-            'filename': 'brains/CARLA/config/config_inference_followlane_sb_sac_f1_carla_2.yaml'
+            'filename': 'brains/CARLA/config/config_inference_followlane_sb_sac_f1_carla_no_speed.yaml'
         }
 
         f = open(args['filename'], "r")

@@ -12,7 +12,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <http://www.gnu.org/licenses/>.
 """
-
+import random
 import traceback
 import pandas as pd
 import numpy as np
@@ -26,6 +26,7 @@ import re
 from bagpy import bagreader
 from utils.logger import logger
 from scripts import plot_tensorboard_perc_histogram
+from scipy.spatial import cKDTree
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -698,8 +699,8 @@ def convert_ros_checkpoint_to_carla_checkpoint(experiment_metrics, current_check
         checkpoint_y = -current_checkpoint[1]
     elif (experiment_metrics['carla_map'] == 'Carla/Maps/Town04' or experiment_metrics[
         'carla_map'] == 'Carla/Maps/Town04_Opt'):
-        checkpoint_x = -current_checkpoint[0]
-        checkpoint_y = -current_checkpoint[1]
+        checkpoint_x = current_checkpoint[0]
+        checkpoint_y = current_checkpoint[1]
     else:
         checkpoint_x = current_checkpoint[0]
         checkpoint_y = current_checkpoint[1]
@@ -968,6 +969,30 @@ def create_lane_invasions_map(experiment_metrics, experiment_metrics_filename, m
     fig.savefig(experiment_metrics_filename + '_lane_invasion.png', dpi=fig.dpi)
 
 
+def create_map_legend(fig, all_maps, maps_colors):
+    color_handles = [
+        plt.Line2D([0], [0], color=maps_colors[m], lw=8, label=m) for m in all_maps
+    ]
+    fig.legend(
+        handles=color_handles,
+        fontsize=PLOTS_FONTSIZE,
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.02),
+        ncol=len(all_maps)
+    )
+
+    # Add a new legend on the left
+    # balance_info = [
+    #     "1. Clockwise and anticlockwise balance",
+    #     "2. Multiple initial locations",
+    #     "3. Multiple cities",
+    #     "4. Initial speeds balance",
+    #     "5. Initial locations balance"
+    # ]
+    # balance_text = "\n".join(balance_info)
+    # fig.text(0.01, 0.5, balance_text, fontsize=PLOTS_FONTSIZE, transform=fig.transFigure, va='center', ha='left')
+
+
 def get_tensorboard_comparisons(experiments_starting_time, base_dir='./logs/Tensorboard'):
     comparisons = []
 
@@ -1011,13 +1036,21 @@ def get_tensorboard_comparisons(experiments_starting_time, base_dir='./logs/Tens
 
     return comparisons
 
-def get_aggregated_experiments_list(experiments_starting_time):
+def get_aggregated_experiments_list(experiments_starting_time, path='./'):
     current_experiment_folders = []
-    root = './'
-    folders = list(os.walk(root))[1:]
-    for folder in folders:
-        if len(folder[0].split('/')) == 2 and folder[2] and experiments_starting_time < os.stat(folder[0]).st_mtime and re.search("\./[0-9]+-[0-9]+", folder[0]):
-            current_experiment_folders.append(folder)
+    root = path
+    for dirpath, dirnames, filenames in os.walk(root):
+        if dirpath == root:
+            # only process immediate children of root
+            for d in dirnames:
+                folder_path = os.path.join(root, d)
+                folder_name = d
+                if os.listdir(folder_path) \
+                        and experiments_starting_time < os.stat(folder_path).st_mtime \
+                        and re.match(r"^202\d+.*\.launch$", folder_name):
+                    current_experiment_folders.append((folder_path, [], os.listdir(folder_path)))
+            break  # stop walking deeper
+
     current_experiment_folders.sort()
 
     dataframes = []
@@ -1027,9 +1060,10 @@ def get_aggregated_experiments_list(experiments_starting_time):
             json_list = list(filter(r.match, folder[2])) # Read Note below
             df = pd.read_json(folder[0] + '/' + json_list[0], orient='index').T
             dataframes.append(df)
-        except:
+        except Exception as e:
             print('Broken experiment: ' + folder[0])
-            shutil.rmtree(folder[0])
+            traceback.print_exc()
+            # shutil.rmtree(folder[0])
 
     result = pd.concat(dataframes)
     result.index = result['experiment_model'].values.tolist()
@@ -1054,15 +1088,15 @@ def get_aggregated_experiments_list(experiments_starting_time):
 
 def get_maps_colors():
     maps_colors = {
-        'Carla/Maps/Town01': 'red',
-        'Carla/Maps/Town01_Opt': 'red',
+        # 'Carla/Maps/Town01': 'red',
+        # 'Carla/Maps/Town01_Opt': 'red',
         'Carla/Maps/Town02': 'green',
         'Carla/Maps/Town02_Opt': 'green',
-        'Carla/Maps/Town03': 'blue',
-        'Carla/Maps/Town04': 'grey',
-        'Carla/Maps/Town05': 'black',
+        # 'Carla/Maps/Town03': 'blue',
+        # 'Carla/Maps/Town04': 'grey',
+        # 'Carla/Maps/Town05': 'black',
         'Carla/Maps/Town06': 'pink',
-        'Carla/Maps/Town07': 'orange',
+        # 'Carla/Maps/Town07': 'orange',
         'Carla/Maps/Town10HD': 'yellow',
     }
     return maps_colors
@@ -1078,23 +1112,10 @@ def get_maps_colors():
 #     }
 #     return model_colors
 
-def get_color_handles():
-    red_patch = mpatches.Patch(color='red', label='Map01')
-    green_patch = mpatches.Patch(color='green', label='Map02')
-    blue_patch = mpatches.Patch(color='blue',  label='Map03')
-    grey_patch = mpatches.Patch(color='grey',  label='Map04')
-    black_patch = mpatches.Patch(color='black',  label='Map05')
-    pink_patch = mpatches.Patch(color='pink',  label='Map06')
-    orange_patch = mpatches.Patch(color='orange',  label='Map07')
-    yellow_patch = mpatches.Patch(color='yellow',  label='Map10HD')
-    color_handles = [red_patch, green_patch, blue_patch, grey_patch, black_patch, pink_patch, orange_patch, yellow_patch]
-
-    return color_handles
-
 def get_all_experiments_aggregated_metrics(result, experiments_starting_time_str, experiments_metrics_and_titles):
     maps_colors = get_maps_colors()
-    color_handles = get_color_handles()
     models = result['experiment_model'].unique()
+    all_maps = result['carla_map'].unique()
 
     for experiment_metric_and_title in experiments_metrics_and_titles:
         metric_name = experiment_metric_and_title['metric']
@@ -1133,7 +1154,7 @@ def get_all_experiments_aggregated_metrics(result, experiments_starting_time_str
         fig.tight_layout(rect=[0, 0.05, 1, 0.95])
 
         # Add global legend below the subplots
-        fig.legend(handles=color_handles, loc='lower center', ncol=len(color_handles), fontsize=20, bbox_to_anchor=(0.5, 0.01))
+        create_map_legend(fig, all_maps, maps_colors)
 
         plt.savefig(f"{experiments_starting_time_str}/{metric_name}.png", bbox_inches='tight')
         plt.close()
@@ -1171,7 +1192,6 @@ def plot_sparse_lines(models_data,
         model_name = model["model_name"]
         y_values = model["y_values"]
         waypoint_order = model["waypoint_order"]
-        waypoint_colors = model["waypoint_colors"]
         std_values = model["std_values"]  # <-- available now
         color = colors(idx)  # consistent color picked from the colormap
 
@@ -1321,7 +1341,6 @@ def dict_to_color(data: dict) -> carla.Color:
 
 def get_per_model_aggregated_metrics(result, experiments_starting_time_str, experiments_metrics_and_titles):
     maps_colors = get_maps_colors()
-    color_handles = get_color_handles()
     unique_experiment_models = result['experiment_model'].unique()
 
     for unique_experiment_model in unique_experiment_models:
@@ -1370,13 +1389,7 @@ def get_per_model_aggregated_metrics(result, experiments_starting_time_str, expe
                 plt.yticks(fontsize=PLOTS_FONTSIZE)
 
                 # Legend
-                plt.legend(
-                    handles=color_handles,
-                    fontsize=PLOTS_FONTSIZE,
-                    bbox_to_anchor=(1.05, 1),  # shift legend outside the right
-                    loc='upper left',
-                    borderaxespad=0.
-                )
+                create_map_legend(fig, unique_model_experiments['carla_map'].unique(), maps_colors)
                 fig.tight_layout(rect=[0, 0, 0.85, 1])  # leave space on the right
                 filename = f"{experiments_starting_time_str}/{unique_experiment_model}_{metric}.png"
                 plt.savefig(filename)
@@ -1390,7 +1403,6 @@ import numpy as np
 def get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_time_str, experiments_metrics_and_titles):
     try:
         maps_colors = get_maps_colors()
-        color_handles = get_color_handles()
         for experiment_metric_and_title in experiments_metrics_and_titles:
             print(f"plotting {experiment_metric_and_title['metric']} boxplot")
 
@@ -1422,7 +1434,26 @@ def get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_
                             for _, row in filtered.iterrows():
                                 speeds = row[metricname]  # list of floats
                                 wp_ids = row["waypoint_order"]  # list of ints, same length as speeds
+                                waypoint_colors = [ dict_to_color(c) for c in row["waypoints_info_colors"] ]
+                                # filter out first and last 100 values
 
+                                # OJO! To remove start and end 0 speeds
+                                speeds = speeds[200:-200]
+                                wp_ids = wp_ids[200:-200]
+
+                                # title = f"{experiment_metric_and_title['title']} Progress ({carla_map} - {'CW' if clockwise else 'ACW'})"
+                                # save_path = f"/home/ruben/Desktop/{carla_map.split('/')[-1]}_{'cw' if clockwise else 'acw'}_{metricname}_{random.randint(1, 1000)}.png"
+                                # print(f"plotting {carla_map}_{'cw' if clockwise else 'acw'}_{metricname}_{random.randint(1, 1000)}")
+                                # plot_sparse_line(
+                                #     y_values=speeds,
+                                #     waypoint_order=wp_ids,
+                                #     waypoint_colors=waypoint_colors,
+                                #     direction_right=True,
+                                #     title=title,
+                                #     x_label='position index',
+                                #     y_label='speeds',
+                                #     save_path=save_path,
+                                # )
                                 for wp, s in zip(wp_ids, speeds):
                                     speeds_by_wp[wp].append(s)
 
@@ -1434,11 +1465,17 @@ def get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_
                                 averages[wp] = np.mean(values)
                                 std_devs[wp] = np.std(values)
 
-                            reference_order = filtered['waypoint_order'].iloc[0]
-                            waypoint_ids = reference_order
 
-                            avg_values = np.array([averages[wp] for wp in waypoint_ids])
-                            std_values = np.array([std_devs[wp] for wp in waypoint_ids])
+                            # reference_order = filtered['waypoint_order'].iloc[0]
+                            # waypoint_ids = reference_order
+                            all_wps = sorted(speeds_by_wp.keys())
+                            wp_to_idx = {wp: i for i, wp in enumerate(all_wps)}
+
+                            avg_values = np.array([averages[wp] for wp in all_wps])
+                            std_values = np.array([std_devs[wp] for wp in all_wps])
+
+                            # Use relative indices for plotting
+                            waypoint_order_relative = [wp_to_idx[wp] for wp in all_wps]
 
                             com_dict = {
                                 'model_name': model_name,
@@ -1447,7 +1484,7 @@ def get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_
                                 model_name + '-' + carla_map_name: {
                                     'avg': avg_values,
                                     'std': std_values,
-                                    'waypoint_order': filtered['waypoint_order'].iloc[0],  # assuming same order
+                                    'waypoint_order': waypoint_order_relative,
                                     'waypoint_colors': filtered['waypoints_info_colors'].iloc[0]
                                 }
                             }
@@ -1504,103 +1541,163 @@ def get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_
                         max_value = max(max_value, df[model_name + '-' + carla_map_name].max())
 
                 # Plot per model-town histogram
-                for row in dataframes:
-                    # city = row['carla_map'][0].split('/')[-1]
-                    city = row['carla_map'][0]
-                    model = row['model_name'][0]
-                    metricname = experiment_metric_and_title['metric'].replace('histogram_', '')
-                    fig, ax = plt.subplots(figsize=(10, 5))
-                    title = f"{experiment_metric_and_title['title']} Histogram ({model} - {city})"
-                    ax.set_title(title)
+                # for row in dataframes:
+                #     try:
+                #         city = row['carla_map'][0]
+                #         model = row['model_name'][0]
+                #         metricname = experiment_metric_and_title['metric'].replace('histogram_', '')
+                #         fig, ax = plt.subplots(figsize=(10, 5))
+                #         title = f"{experiment_metric_and_title['title']} Histogram ({model} - {city})"
+                #         ax.set_title(title)
+                #
+                #         plot_tensorboard_perc_histogram.plot_histogram_from_metric_lists(
+                #             ax,
+                #             metricname,
+                #             experiment_metric_and_title['title'],
+                #             comp_1={'tag': model, 'metrics': row[model + '-' + city]},
+                #             # comp_2={'tag': '', 'metrics': {'speeds': []}},  # Empty placeholders
+                #             # comp_3={'tag': '', 'metrics': {'speeds': []}},
+                #             x_around_0=True if 'sign' in metricname else False
+                #         )
+                #
+                #         # fig.tight_layout()
+                #         filename = f"{experiments_starting_time_str}/{model}_{city}_{metricname}.png"
+                #         fig.savefig(filename)
+                #         plt.close()
+                #     except Exception:
+                #         print("OJO!!! Couldn't plot histogram!!")
+                # continue
+                city_to_models = defaultdict(list)
+                for df in dataframes:
+                    try:
+                        city = df['carla_map'][0]
+                        city_to_models[city].append(df)
+                    except Exception as e:
+                        print(f"OJO!!! Error when building data for histogram for city '{city}' — {e}")
+                    finally:
+                        continue
 
-                    plot_tensorboard_perc_histogram.plot_histogram_from_metric_lists(
-                        ax,
-                        metricname,
-                        experiment_metric_and_title['title'],
-                        comp_1={'tag': model, 'metrics': row[model + '-' + city]},
-                        # comp_2={'tag': '', 'metrics': {'speeds': []}},  # Empty placeholders
-                        # comp_3={'tag': '', 'metrics': {'speeds': []}},
-                        x_around_0=True if 'sign' in metricname else False
-                    )
+            # Plot one combined histogram per city
+                for city, city_dfs in city_to_models.items():
+                    try:
+                        fig, ax = plt.subplots(figsize=(10, 5))
+                        metricname = experiment_metric_and_title['metric'].replace('histogram_', '')
+                        title = f"{experiment_metric_and_title['title']} Histogram ({city})"
+                        ax.set_title(title)
 
-                    # fig.tight_layout()
-                    filename = f"{experiments_starting_time_str}/{model}_{city}_{metricname}.png"
-                    fig.savefig(filename)
-                    plt.close()
+                        # Collect all comps for this city
+                        comps = []
+                        for df in city_dfs:
+                            model = df['model_name'][0]
+                            comp_dict = {
+                                'tag': model,
+                                'metrics': df[f"{model}-{city}"]
+                            }
+                            comps.append(comp_dict)
+
+                        # Plot up to 3 models per city (extendable later)
+                        if len(comps) >= 1:
+                            comp_1 = comps[0]
+                            comp_2 = comps[1] if len(comps) > 1 else None
+                            comp_3 = comps[2] if len(comps) > 2 else None
+
+                            plot_tensorboard_perc_histogram.plot_histogram_from_metric_lists(
+                                ax,
+                                metricname,
+                                experiment_metric_and_title['title'],
+                                comp_1=comp_1,
+                                comp_2=comp_2,
+                                comp_3=comp_3,
+                                x_around_0=True if 'sign' in metricname else False
+                            )
+                            filename = f"{experiments_starting_time_str}/combined_{city}_{metricname}.png"
+                            fig.savefig(filename)
+                            plt.close()
+                    except Exception as e:
+                        print(f"OJO!!! Couldn't plot histogram for city '{city}' — {e}")
+
                 continue
 
-            # Build dataframes for each model/map combination
-            for model_name in result['experiment_model'].unique():
-                metricname = experiment_metric_and_title['metric']
-                for carla_map in result['carla_map'].unique():
-                    com_dict = {
-                        'model_name': model_name,
-                        model_name + '-' + carla_map: result.loc[
-                            (result['experiment_model'] == model_name) &
-                            (result['carla_map'] == carla_map)
-                            ][metricname].tolist(),
-                        'carla_map': carla_map
-                    }
-                    df = pd.DataFrame(data=com_dict)
-                    dataframes.append(df)
-                    max_value = max(max_value, df[model_name + '-' + carla_map].max())
+            models = result['experiment_model'].unique()
+            maps = result['carla_map'].unique()
+            metricname = experiment_metric_and_title['metric']
 
-            # Prepare full list and colors
-            full_list = []
-            colors = []
-            for carla_map in result['carla_map'].unique():
-                for experiment_model in result['experiment_model'].unique():
-                    full_list.append(experiment_model + '-' + carla_map)
-                    colors.append(maps_colors[carla_map])
+            # --- Prepare global variables ---
+            max_value = 0
+            dataframes = []
 
-            # Concatenate dataframes
-            result_by_experiment_model = pd.concat(dataframes)
+            # Prepare color mapping per map
+            colors = [maps_colors[m] for m in maps]
 
-            # Boxplot
-            ax, props = result_by_experiment_model.boxplot(
-                column=full_list,
-                showfliers=True, sym='k.',
-                return_type='both',
-                patch_artist=True,
-                ax=ax
+            # --- Build one dataframe per model ---
+            for model_name in models:
+                model_df_list = []
+
+                for carla_map in maps:
+                    filtered = result.loc[
+                        (result['experiment_model'] == model_name) &
+                        (result['carla_map'] == carla_map)
+                        ]
+
+                    if not filtered.empty:
+                        data = filtered[metricname].dropna().values
+                        if len(data) > 0:
+                            model_df_list.append(data)
+                        else:
+                            model_df_list.append([])
+                    else:
+                        model_df_list.append([])
+                # store per model
+                dataframes.append(model_df_list)
+
+            # --- Build figure ---
+            fig, axes = plt.subplots(1, len(models), figsize=(10 * len(models), 10), sharey=True)
+            if len(models) == 1:
+                axes = [axes]
+
+            # --- Plot each model’s section ---
+            for ax, model_name, model_data_list in zip(axes, models, dataframes):
+                # Boxplot for all maps in this model
+                bp = ax.boxplot(
+                    model_data_list,
+                    patch_artist=True,
+                    showfliers=True,
+                    sym='k.'
+                )
+
+                # Set box colors by map
+                for patch, color in zip(bp['boxes'], colors):
+                    patch.set_facecolor(color)
+
+                # Titles and labels
+                ax.set_title(model_name, fontsize=PLOTS_FONTSIZE)
+                ax.set_xticks(range(1, len(maps) + 1))
+                ax.tick_params(axis='y', labelsize=30)
+                ax.grid(True, linestyle='--', alpha=0.5)
+
+            # --- Global labels and legend ---
+            fig.suptitle(
+                f"{experiment_metric_and_title['title']} boxplot",
+                fontsize=PLOTS_FONTSIZE + 10
             )
 
-            # Set box colors
-            for patch, color in zip(props['boxes'], colors):
-                patch.set_facecolor(color)
+            # Create legend (colors by map)
+            create_map_legend(fig, maps, maps_colors)
 
-            # Set title and axis labels
-            ax.set_title(experiment_metric_and_title['title'] + ' boxplot', fontsize=PLOTS_FONTSIZE)
-            ax.set_xlabel('Model', fontsize=PLOTS_FONTSIZE)
-            ax.set_ylabel(experiment_metric_and_title['metric'], fontsize=PLOTS_FONTSIZE)
+            fig.tight_layout(rect=[0, 0.05, 1, 0.95])
 
-            # Set tick labels and sizes
-            ax.set_xticklabels([model.split('-')[0] for model in full_list], rotation=0)
-            ax.tick_params(axis='x', labelsize=40)
-            ax.tick_params(axis='y', labelsize=40)
-
-            # Move legend below the plot
-            ax.legend(
-                handles=color_handles,
-                fontsize=PLOTS_FONTSIZE,
-                loc='upper center',
-                bbox_to_anchor=(0.5, -0.15),
-                ncol=len(color_handles)
-            )
-
-            # Adjust layout to leave space for legend
-            fig.tight_layout(rect=[0, 0.1, 1, 0.95])
-
-            # Adjust y-axis limit
+            # --- Adjust y-axis limits ---
             if max_value > 0:
-                ax.set_ylim(0, max_value + max_value * 0.1)
+                for ax in axes:
+                    ax.set_ylim(0, max_value + max_value * 0.1)
 
-            # Save figure
+            # --- Save figure ---
             plt.savefig(
                 f"{experiments_starting_time_str}/{experiment_metric_and_title['metric']}_boxplot.png",
                 bbox_inches='tight'
             )
             plt.close()
+
     except Exception as e:
         print(f"OJO! Any metric was not plotted because of error")
         traceback.print_exc()

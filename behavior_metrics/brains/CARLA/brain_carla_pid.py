@@ -116,7 +116,7 @@ class Brain:
         self.camera_3 = sensors.get_camera('camera_3')
         self.speedometer = sensors.get_speed('speedometer_0')
         self.wheel = sensors.get_wheel('wheel')
-        self.v_goal_buffer = deque(maxlen=10)
+        self.v_goal_buffer = deque(maxlen=1)
 
         self.start_time = time.time()
         self.avg_speed = 0
@@ -189,9 +189,9 @@ class Brain:
 
         self.inference_distance = self.lane_detector.inference_distances[self.map.name]
 
-        self.steer_pid = PIDController(Kp=1.0, Ki=0.0, Kd=0.1, output_limits=(-1.0, 1.0))
-        self.speed_pid = PIDController(Kp=0.5, Ki=0.05, Kd=0.1, output_limits=(-1.0, 1.0))
-        # action_noise = NormalActionNoise(mean=np.zeros(2), sigma=0.0 * np.ones(2))
+        self.steer_pid = PIDController(Kp=2, Ki=0.05, Kd=1, output_limits=(-1, 1))
+        # The speed PID seems reasonable but can be fine-tuned if needed
+        self.speed_pid = PIDController(Kp=1.0, Ki=0.05, Kd=0.1, output_limits=(-1.0, 1.0))
         # self.ppo_agent.action_noise = action_noise
         # self.lane_detector.set_init_pose()
 
@@ -337,13 +337,14 @@ class Brain:
         self.tensorboard.update_fps(fps)
 
         # --- Steering error ---
-        # Take lateral deviation from lane center (already in state via x_centers_normalized)
-        deviation = np.mean(self.previous_states) - 0.5  # negative: left, positive: right
+        closer_points = np.mean(self.previous_states[3:5])
+        deviation = closer_points - 0.5
         steer = self.steer_pid.step(deviation)
-
         # --- Speed error ---
-        speed_error = (self.v_goal - self.speed) / 25.0  # normalize by max speed
+        speed_error = (self.v_goal - self.speed) / 20  # normalize by max speed
         throttle_cmd = self.speed_pid.step(speed_error)
+        # print(f"s {speed_error}")
+        # print(throttle_cmd)
 
         if throttle_cmd > 0:
             throttle = throttle_cmd
@@ -405,7 +406,7 @@ class Brain:
         #
         # self.tensorboard.update_state(state, self.step)
 
-        self.avg_speed = self.avg_speed + (speed - self.avg_speed) / self.step
+        self.avg_speed = self.avg_speed + (self.speed - self.avg_speed) / self.step
 
         # print(str(action))
         # print("----")

@@ -47,9 +47,9 @@ Behaviors:
             ImageTranform: ''
         Type: 'CARLA'
     Simulation:
-#        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
+        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch
-        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
+#        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_05_anticlockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
 #        World: configs/CARLA/CARLA_launch_files/town_10_anticlockwise_ruben.launch

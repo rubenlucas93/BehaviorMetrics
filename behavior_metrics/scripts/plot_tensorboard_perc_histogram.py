@@ -375,6 +375,7 @@ def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, 
     if x_around_0:
         max_abs = max(min_x, max_x)
         x_axis = [-max_abs, max_abs]
+        # x_axis = [-1, 1]
 
     max_y = max(max_y_vals) if max_y_vals else 1
 
@@ -382,7 +383,7 @@ def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, 
     axs.set_ylim([0, max_y * 1.1])
     axs.legend(fontsize=fontsize, bbox_to_anchor=(1, 1))
 
-    ticks = np.linspace(min_x, max_x, 11)
+    ticks = np.linspace(x_axis[0], x_axis[1], 11)
     ticks = np.where(np.isclose(ticks, 0.0), 0.0, ticks)
     axs.set_xticks(ticks)
     axs.set_yticks(np.linspace(0, max_y * 1.1, 11))

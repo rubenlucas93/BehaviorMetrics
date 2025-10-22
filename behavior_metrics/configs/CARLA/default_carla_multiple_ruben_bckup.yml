@@ -32,11 +32,10 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/steering_angle'
         BrainPath: [
             'brains/CARLA/brain_carla_sb_td3.py',
-#            'brains/CARLA/brain_carla_sb_sac.py',
-            'brains/CARLA/brain_carla_sb_sac_fixed_position.py',
+            'brains/CARLA/brain_carla_sb_sac.py',
 #            'brains/CARLA/brain_carla_sb_ppo.py',
 #            'brains/CARLA/brain_carla_sb_ddpg.py',
-#            'brains/CARLA/brain_carla_sb_sac_2.py',
+            'brains/CARLA/brain_carla_sb_sac_2.py',
 #            'brains/CARLA/brain_carla_sb_sac_unbalanced.py',
 #            'brains/CARLA/brain_carla_sb_ddpg_unbalanced.py',
 #            'brains/CARLA/brain_carla_sb_ppo_unbalanced.py',
@@ -44,12 +43,12 @@ Behaviors:
 #            'brains/CARLA/brain_carla_sb_ppo_04.py',
 #            'brains/CARLA/brain_carla_sb_ddpg_01.py',
             'brains/CARLA/brain_carla_sb_sac_01.py',
-#            'brains/CARLA/brain_carla_sb_sac_3.py', # no_cc
-#            'brains/CARLA/brain_carla_sb_sac_4.py', # no_cc
-#            'brains/CARLA/brain_carla_sb_sac_no_cc.py', # no_speed
-#            'brains/CARLA/brain_carla_sb_sac_no_speed.py', # no_speed
+            'brains/CARLA/brain_carla_sb_sac_3.py', # no_cc
+            'brains/CARLA/brain_carla_sb_sac_4.py', # no_cc
+            'brains/CARLA/brain_carla_sb_sac_no_cc.py', # no_speed
+            'brains/CARLA/brain_carla_sb_sac_no_speed.py', # no_speed
 #            'brains/CARLA/brain_carla_sb_ppo_01.py',
-            'brains/CARLA/brain_carla_sb_sac_no_01.py',
+#            'brains/CARLA/brain_carla_sb_sac_no_01.py',
 #            'brains/CARLA/brain_carla_sb_ppo_no_01.py',
             ]
         Actuators:
@@ -65,11 +64,11 @@ Behaviors:
         Parameters:
 #            Model: ["sac_unbalanced", "ddpg_unbalanced", "ppo_unbalanced",
 #            "sac_04", "ppo_04", "ddpg_01", "sac_01", "ppo_01", "sac_no_01", "ppo_no_01"]
-            Model: ["td3", "F (1, 3, 4)", "C_01 (1, 4, 5)",  "C_0304 (1, 4, 5)"]
+#            Model: ["sac_unbalanced","sac_04",  "sac_01", "sac_no_01"]
 #            Model: ["sac", "ppo", "ddpg"]
-#            Model: ["td3", "sac_peak", "sac2_peak", "sac_01_peak", "sac_no_cc",
-#              "sac_no_speed","sac_no_cc_peak", "sac_no_speed_peak"]
-#            Model: ["td3"]
+            Model: ["td3", "sac_peak", "sac2_peak", "sac_01_peak", "sac_no_cc",
+              "sac_no_speed","sac_no_cc_peak", "sac_no_speed_peak"]
+#            Model: ["sac2"]
             ImageCropped: True
             ImageSize: [ 100,50 ]
             ImageNormalized: True
@@ -86,10 +85,10 @@ Behaviors:
 #        MaxWaits: [450, 450, 450, 450, 450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
 #        Timeout: [1, 1, 1, 1] # time to poll if experiment is done (1 for each world)
 #        MaxWaits: [450, 450, 450, 450] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
-        Timeout: [1, 1, 1] # time to poll if experiment is done (1 for each world)
-        MaxWaits: [450, 450, 450] # maximum nexperiment is done (1 for each world)
-#        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
-#        MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+#        Timeout: [1, 1, 1] # time to poll if experiment is done (1 for each world)
+#        MaxWaits: [450, 450, 450] # maximum nexperiment is done (1 for each world)
+        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
+        MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
 #        Timeout: [ 1 ] # time to poll if experiment is done (1 for each world)
 #        MaxWaits: [ 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
         Repetitions: 10
@@ -103,7 +102,7 @@ Behaviors:
 #             configs/CARLA/CARLA_launch_files/town_04_clockwise.launch,
 #             configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch,
              configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
-             configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
 #             configs/CARLA/CARLA_launch_files/town_06_anticlockwise_ruben.launch
             ]
         RandomSpawnPoint: False

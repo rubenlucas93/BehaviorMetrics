@@ -1,7 +1,7 @@
 settings:
   mode: inference # training, retraining, inference
   task: follow_lane_carla # follow_line_gazebo, follow_lane_gazebo, autoparking_gazebo
-  algorithm: sac # qlearn, dqn, sac, ppo
+  algorithm: td3 # qlearn, dqn, td3, ppo
   simulator: carla # openai, carla, gazebo, sumo
   environment_set: carla_environments # gazebo_environments, carla_environments
   env: follow_lane # Town01, simple, nurburgring, montreal, curves, simple_laser, manual, autoparking
@@ -21,7 +21,7 @@ settings:
   steps_to_decrease: 15000
   decrease_substraction: 0.005
   decrease_min: 0.005
-  inference_distance: 1400 # 200 [Town04] 2000 [Town05] 1400 [Town10HD]
+  inference_distance: 1300 # 2000 [Town05] 1400 [Town06]
   reward_params:
     function: pow
     punish_zig_zag_value: 1
@@ -33,16 +33,17 @@ ros:
   gazebo_master_uri: "11345"
 
 inference:
-  sac:
-#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20251011-121629/best_model.zip
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20251011-121629/model_2600000_steps_20251013-153933.zip
+  td3:
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_td3_auto_carla_baselines/20251012-185439/best_model.zip
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/td3/model_1360000_steps.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/td3/21_10_best_model_more_exploration.zip
 
 algorithm:
-  sac:
+  td3:
     gamma: 0.9
     tau: 0.005
     std_dev: 0
-    model_name: sac_Actor_conv2d32x64_Critic_conv2d32x64
+    model_name: td3_Actor_conv2d32x64_Critic_conv2d32x64
     replay_memory_size: 10_000
     memory_fraction: 0.20
     critic_lr: 0.003
@@ -74,11 +75,8 @@ states:
     1: speed/40
     2: w_angle
     3: calculate_curvature_from
-    4: previous_action[0]
-    5: previous_action[1]
   sp10:
-    0: [275, 280, 290, 295, 320, 360, 390, 420, 450, 480]
-#    0: [270, 280, 290, 300, 310, 330, 370, 400, 430, 460]
+    0: [270, 280, 290, 295, 320, 360, 390, 420, 450, 480]
   spn:
     0: [10]
 
@@ -94,7 +92,7 @@ rewards:
 carla_environments:
   follow_lane:
     env_name: CarlaEnv-v0
-    town: Town02 #Town01, Town02, Town03, Town04, Town05, Town10HD
+    town: Town04 #Town01, Town02, Town03, Town04, Town05, Town10HD
     # Town01_Opt, Town02_Opt, Town03_Opt, Town04_Opt, Town05_Opt, Town10HD_Opt
     car: model1
     weather: ClearNoon #dynamic, argparse
@@ -117,7 +115,7 @@ carla_environments:
     reset_threshold: 0.3
     alternate_pose: false
     waypoints_meters: 5 #distance between waypoints in meters
-    waypoints_init: 21 # 6927  1471 899
+    waypoints_init: 899 # 6927  1471 899
     waypoints_target: 959 #961
     waypoints_lane_id: -1
     waypoints_road_id: 8
@@ -125,4 +123,4 @@ carla_environments:
 carla:
   carla_server: localhost
   carla_client: 2000
-  manager_port: 8011
+  manager_port: 8028

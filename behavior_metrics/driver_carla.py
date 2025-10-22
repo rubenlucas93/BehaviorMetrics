@@ -133,10 +133,10 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
     os.mkdir(experiments_starting_time_str)
 
     experiments_metrics_and_titles = [
-        # {
-        #     'metric': 'line_speeds_by_waypoint',
-        #     'title': 'speed by waypoint'
-        # },
+        {
+            'metric': 'line_speeds_by_waypoint',
+            'title': 'speed by waypoint'
+        },
         {
             'metric': 'histogram_speeds',
             'title': 'Experiment speed histograms'

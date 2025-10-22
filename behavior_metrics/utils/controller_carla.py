@@ -135,24 +135,24 @@ POINTS_PER_MAP = {
 
 DISTANCE_PER_MAP = {
     'Carla/Maps/Town02_Opt': {
-        'clockwise': 800,
-        'anticlockwise': 1300
+        'clockwise': 2500,
+        'anticlockwise': 2500
     },
     'Carla/Maps/Town10HD': {
-        'clockwise': 800,
-        'anticlockwise': 1100
+        'clockwise': 2500,
+        'anticlockwise': 2500
     },
     'Carla/Maps/Town06': {
-        'clockwise' : 2100,
-        'anticlockwise': 1800
+        'clockwise' : 3500,
+        'anticlockwise': 3500
     },
     'Carla/Maps/Town04': {
-        'clockwise': 2100,
-        'anticlockwise': 2100
+        'clockwise': 3700,
+        'anticlockwise': 3700
     },
     'Carla/Maps/Town05': {
-        'clockwise': 1100,
-        'anticlockwise': 1100
+        'clockwise': 2500,
+        'anticlockwise': 2500
     }
     # Add more circuits as needed
 }
@@ -338,8 +338,8 @@ class ControllerCarla:
         else:
             self.last_distance_run = distance_run
             self.stopped_steps = 0
-        if self.stopped_steps >= 600:
-            print("stopped 600 steps!!!")
+        if self.stopped_steps >= 1000:
+            print("stopped 1000 steps!!!")
             return True
         return False
 
@@ -748,6 +748,7 @@ class ControllerCarla:
             z=spawn_dict['location']['z']
         )
         yaw_offset = random.uniform(-2.0, 2.0)
+        # yaw_offset = 0
         if not right:
             yaw_offset += 180.0  # Flip direction
         new_rotation = carla.Rotation(

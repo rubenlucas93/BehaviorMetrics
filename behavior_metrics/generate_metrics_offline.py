@@ -124,13 +124,13 @@ def is_config_correct(app_configuration):
 
     return is_correct
 
-def generate_agregated_experiments_metrics(experiments_starting_time, experiments_elapsed_times, app_configuration):
-    result = metrics_carla.get_aggregated_experiments_list(experiments_starting_time)
+def generate_agregated_experiments_metrics(experiments_starting_time, experiments_elapsed_times, app_configuration, path='./'):
+    result = metrics_carla.get_aggregated_experiments_list(experiments_starting_time, path)
 
     experiments_starting_time_dt = datetime.fromtimestamp(experiments_starting_time)
     experiments_starting_time_str = str(experiments_starting_time_dt.strftime("%Y%m%d-%H%M%S")) + '_experiments_metrics'
 
-    os.makedirs(experiments_starting_time_str, exist_ok=True)
+    os.makedirs(path + '/' + experiments_starting_time_str, exist_ok=True)
     experiments_metrics_and_titles = [
         {
             'metric': 'line_speeds_by_waypoint',
@@ -295,6 +295,7 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
             },
         )
 
+    experiments_starting_time_str = path + experiments_starting_time_str
     metrics_carla.get_all_experiments_aggregated_metrics(result, experiments_starting_time_str, experiments_metrics_and_titles)
     metrics_carla.get_per_model_aggregated_metrics(result, experiments_starting_time_str, experiments_metrics_and_titles)
     metrics_carla.get_all_experiments_aggregated_metrics_boxplot(result, experiments_starting_time_str, experiments_metrics_and_titles)
@@ -313,15 +314,24 @@ def generate_agregated_experiments_metrics(experiments_starting_time, experiment
 
 from types import SimpleNamespace
 
+
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Generate aggregated experiments metrics.")
+    parser.add_argument("--path", required=False, help="Path to the experiments directory", default='./')
+    args = parser.parse_args()
+
+    path = args.path + '/'
+
     timestamp_str = "20250704-214225"
     dt = datetime.strptime(timestamp_str, "%Y%m%d-%H%M%S")
     experiments_starting_time = dt.timestamp()
+
     experiments_elapsed_times = {'experiment_counter': [], 'elapsed_time': []}
     experiments_elapsed_times['total_experiments_elapsed_time'] = time.time() - experiments_starting_time
+
     app_configuration = SimpleNamespace(**{"task": "none"})
 
-    generate_agregated_experiments_metrics(experiments_starting_time, experiments_elapsed_times, app_configuration)
+    generate_agregated_experiments_metrics(experiments_starting_time, experiments_elapsed_times, app_configuration, path)
     # comparisons = metrics_carla.get_tensorboard_comparisons(experiments_starting_time)
     # plot_tensorboard_perc_histogram.save_histograms_comparison_same(comparisons[0], comparisons[1], comparisons[2])
 

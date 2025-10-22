@@ -1,16 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import csv
+import cv2
+import carla
 import math
 import numpy as np
 import threading
 import time
+from collections import deque
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from stable_baselines3 import SAC
+from stable_baselines3 import DDPG
 import carla
-from collections import deque
+
+import torch
+from collections import Counter
 
 import random
 import yaml
@@ -27,6 +32,9 @@ from stable_baselines3.common.noise import NormalActionNoise
 
 GENERATED_DATASETS_DIR = ROOT_PATH + '/' + DATASETS_DIR
 
+NO_DETECTED = 1
+
+
 from pydantic import BaseModel
 class InferenceExecutorValidator(BaseModel):
     settings: dict
@@ -35,18 +43,23 @@ class InferenceExecutorValidator(BaseModel):
 class Brain:
 
     def __init__(self, sensors, actuators, handler, config=None):
+        self.controller = handler.controller
+
+        time.sleep(10)
         self.client = carla.Client(
             "localhost",
-            2000,
+            self.controller.client_port
         )
         self.client.set_timeout(10.0)
         print(f"\n maps in carla 0.9.13: {self.client.get_available_maps()}\n")
-        self.controller = handler.controller
 
         self.world = self.client.get_world()
+        # print(self.world.get_map.name)
         self.map = self.world.get_map()
         all_actors = self.world.get_actors()
+        # print(all_actors)
         vehicles = all_actors.filter("vehicle.*")
+
         if len(vehicles) > 0:
             self.car = vehicles[0]
         else:
@@ -60,6 +73,7 @@ class Brain:
 
         self.last_action = [0, 0]
         self.last_state = [0, 0, 0, 0, 0]
+        self.detection_mode = "carla_perfect"
         self.camera = sensors.get_camera('camera_0')
         self.camera_1 = sensors.get_camera('camera_1')
         self.camera_2 = sensors.get_camera('camera_2')
@@ -67,6 +81,9 @@ class Brain:
         self.speedometer = sensors.get_speed('speedometer_0')
         self.wheel = sensors.get_wheel('wheel')
         self.v_goal_buffer = deque(maxlen=10)
+
+        self.start_time = time.time()
+        self.avg_speed = 0
 
         self.pose = sensors.get_pose3d('pose3d_0')
 
@@ -84,29 +101,25 @@ class Brain:
         self.cont = 0
         self.iteration = 0
         self.step = 0
-        self.previous_states = [0] * 25
 
-        self.avg_speed = 0
-        self.start_time = time.time()
-
+        self.sync_mode = True
+        self.show_images = False
         # self.detection_mode = 'lane_detector'
 
         # self.previous_timestamp = 0
         # self.previous_image = 0
 
-        self.previous_v = None
-        self.previous_w = None
-        self.previous_w_normalized = None
+        self.previous_states =  [0] * 25
 
         self.tensorboard = ModifiedTensorBoard(
-            log_dir=f"logs/Tensorboard/sac/{time.strftime('%Y%m%d-%H%M%S')}"
+            log_dir=f"logs/Tensorboard/ddpg/{time.strftime('%Y%m%d-%H%M%S')}"
         )
 
         args = {
-            'algorithm': 'sac',
+            'algorithm': 'ddpg',
             'environment': 'simple',
             'agent': 'f1',
-            'filename': 'brains/CARLA/config/config_inference_followlane_sb_sac_f1_carla_2.yaml'
+            'filename': 'brains/CARLA/config/config_inference_followlane_sb_ddpg_f1_carla_unbalanced.yaml'
         }
 
         f = open(args['filename'], "r")
@@ -119,14 +132,15 @@ class Brain:
             "inference": self.get_inference(config_file, args['algorithm']),
         }
 
-        # self.x_row = [350, 380, 410, 460, 500] # TODO Read from config
         self.x_row = self.get_states_rows(config_file)
+
+        params = InferenceExecutorValidator(**inference_params)
+        inference_file = params.inference["params"]["inference_tf_model_name"]
 
         camera_transform = carla.Transform(carla.Location(x=-2, y=0.0, z=3),
                         carla.Rotation(pitch=-3, yaw=0, roll=0.0))
         self.fov = 90
         self.n_points = 10
-
         self.lane_detector = LaneDetector(self.car,
                                           self.map,
                                           self.world,
@@ -134,14 +148,56 @@ class Brain:
                                           camera_transform,
                                           self.fov,
                                           self.n_points)
-
-        params = InferenceExecutorValidator(**inference_params)
-        inference_file = params.inference["params"]["inference_tf_model_name"]
-        # self.lane_detector.set_init_pose()
-
         self.inference_distance = self.lane_detector.inference_distances[self.map.name]
 
-        self.sac_agent = SAC.load(inference_file)
+        self.ddpg_agent = DDPG.load(inference_file)
+        action_noise = NormalActionNoise(mean=np.zeros(2), sigma=0.0 * np.ones(2))
+        self.ddpg_agent.action_noise = action_noise
+        # self.lane_detector.set_init_pose()
+
+        # location = self.car.get_transform()
+        # print(location)
+
+        # Town01 multiple
+        # location = carla.Transform(
+        #     carla.Location(
+        #         x=92.363960,
+        #         y=45.652158,
+        #         z=1,
+        #     ),
+        #     carla.Rotation(
+        #         pitch=0.142516,
+        #         yaw=-87.689893,
+        #         roll=0.038263,
+        #     ),
+        # )
+
+        # location = carla.Transform(
+        #     carla.Location(
+        #         x=152.093750,
+        #         y=326.573151,
+        #         z=1,
+        #     ),
+        #     carla.Rotation(
+        #         pitch=0.093799,
+        #         yaw=-179.874603,
+        #         roll=-0.080688,
+        #     ),
+        # )
+
+        # Town02 multiple
+        # location = carla.Transform(
+        #     carla.Location(
+        #         x=49.999569,
+        #         y=303.000885,
+        #         z=1,
+        #     ),
+        #     carla.Rotation(
+        #         pitch=0.06,
+        #         yaw=-179.999954,
+        #         roll=-0.006836
+        #     ),
+        # )
 
         ## Town04 multiple
         # location = carla.Transform(
@@ -156,10 +212,13 @@ class Brain:
         #         roll=0.078263,
         #     ),
         # )
-        #
+
         # self.car.set_transform(location)
 
         time.sleep(2)
+
+    def get_states_rows(self, config_file: dict) -> dict:
+        return  config_file["states"][config_file["settings"]["states"]][0]
 
     def get_inference(self, config_file: dict, input_inference: str) -> dict:
         return {
@@ -173,8 +232,6 @@ class Brain:
             "params": config_file["settings"],
         }
 
-    def get_states_rows(self, config_file: dict) -> dict:
-        return  config_file["states"][config_file["settings"]["states"]][0]
 
     def update_frame(self, frame_id, data):
         """Update the information to be shown in one of the GUI's frames.
@@ -198,8 +255,8 @@ class Brain:
             print("episode finished")
             self.controller.stop_car()
             return True
-        # if not self.step % 200:
-        #     print(distance_run)
+        if not self.step % 200:
+            print(distance_run)
 
         # TODO integrate with environment
         # observation, reward, done, info = self.env.step(action, self.step)
@@ -216,7 +273,7 @@ class Brain:
         self.previous_time = now
         self.tensorboard.update_fps(fps)
 
-        [action, _] = self.sac_agent.predict(np.array(self.previous_states), deterministic=True)
+        [action, _] = self.ddpg_agent.predict(np.array(self.previous_states), deterministic=True)
 
         # self.motors.sendThrottle(action[0]*0.7) # A REVISAR POR QUE HAY QUE ESCALAR ESTO
         # self.motors.sendSteer(action[1])
@@ -233,6 +290,7 @@ class Brain:
                                                     brake=brake,
                                                     steer=float(action[1])))
 
+
         image = self.camera.getImage().data
         image_1 = self.camera_1.getImage().data
         image_2 = self.camera_2.getImage().data
@@ -241,33 +299,35 @@ class Brain:
         sensor_time = time.time()
         self.tensorboard.update_times(sensor_time - self.previous_time, "sensor")
 
-        centers, image_processed, center_distance,_ = self.lane_detector.process_image(image)
+        centers, image_processed, center_distance, misalignment = self.lane_detector.process_image(image)
 
         perception_time = time.time()
         self.tensorboard.update_times(perception_time - sensor_time, "perception")
-
-        # speed = self.speedometer.getSpeedometer().data
-        # w_angle = self.wheel.getWheelAngle()
-        # state.append(speed)
-        # state.append(w_angle)
-        # final_curvature = self.lane_detector.calculate_max_curveture_from_centers(state)
 
         v = self.car.get_velocity()
         speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
         w_angle = self.car.get_control().steer
 
+        # final_curvature = self.lane_detector.calculate_max_curveture_from_centers(centers)
+
         state, x_centers_normalized, y_normalized = self.lane_detector.normalize_centers(centers)
         half_image = len(x_centers_normalized)//2
         close_points_dev = abs(x_centers_normalized[0] - x_centers_normalized[half_image])
         x_normalized = np.array(x_centers_normalized)
-        deviated_points = np.sum(np.abs(x_normalized - 0.5) > 0.1)
+        deviated_points = np.sum(np.abs(x_normalized - 0.5) > 0.15)
+
+        # print(deviated_points)
+
+        # speed = self.speedometer.getSpeedometer().data
+        # w_angle = self.wheel.getWheelAngle()
 
         mean_curvature = self.lane_detector.average_curvature_from_centers(centers)
         v_goal_now = self.lane_detector.calculate_v_goal(mean_curvature, center_distance, deviated_points)
+        # print(f"v_goal => {v_goal_now}")
         self.v_goal_buffer.append(v_goal_now)
         v_goal = sum(self.v_goal_buffer) / len(self.v_goal_buffer)
 
-        state.append(speed / 25)
+        state.append(speed/25)
         state.append(w_angle)
         # state.append(final_curvature)
         # state.append(misalignment)
@@ -275,7 +335,7 @@ class Brain:
         state.append(action[1])
         # state.append(close_points_dev)
         # state.append(deviated_points)
-        state.append(v_goal / 25)
+        state.append(v_goal/25)
 
         self.previous_states = state
 
@@ -307,4 +367,3 @@ class Brain:
 
         display_time = time.time()
         self.tensorboard.update_times(display_time - action_time, "display")
-        return False

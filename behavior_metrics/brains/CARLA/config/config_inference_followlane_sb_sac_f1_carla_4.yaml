@@ -34,7 +34,7 @@ ros:
 
 inference:
   sac:
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20250825-200403/model_1080000_steps_20250826-185544.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/no_init_speeds/best_model.zip
 
 algorithm:
   sac:
