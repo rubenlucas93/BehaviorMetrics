@@ -78,7 +78,10 @@ def plot_histogram_with_percentages_same(values, algorithm, color, bins=100, for
 
     # Plot histogram with percentages
     first_column = [row[0] for row in values]
-    count, bin_edges = np.histogram(first_column, bins=bins)
+    if isinstance(bins, (list, np.ndarray)):
+        bin_edges = bins
+    else:
+        count, bin_edges = np.histogram(first_column, bins=bins)
     # _, bin_vis = np.histogram(first_column, bins=x_bins)
 
     # total_count = sum(count)
@@ -93,9 +96,8 @@ def plot_histogram_with_percentages_same(values, algorithm, color, bins=100, for
     values, _, _ = ax.hist(
         first_column,
         bins=bin_edges,
-        histtype='bar',  # Shows only the outline
-        color=color,
-        alpha=0.3,
+        histtype='step',  # Shows only the outline
+        edgecolor=color,
         linewidth=1.5,  # Adjust line thickness
         weights=np.ones_like(first_column) * 100 / len(first_column),
         label=algorithm  # Required for legend
@@ -122,8 +124,9 @@ def extract_tensor_data(log_dir, tag):
         print(f"Available tags in '{dir_path}':", ea.Tags())
 
         if tag not in ea.Tags().get('tensors', []):
-            raise KeyError(f"Key '{tag}' was not found in '{dir_path}'")
-
+            print(f"Key '{tag}' was not found in '{dir_path}'. Skipping it")
+            # raise KeyError(f"Key '{tag}' was not found in '{dir_path}'")
+            continue
         tensors = ea.Tensors(tag)
 
         for event in tensors:
@@ -270,7 +273,7 @@ def plot_histogram_comparison_for_metric(axs, metric, x_label, comp_1, comp_2, c
         ax.set_yticks(np.linspace(y_axis[0], y_axis[1], 11))
 
 
-def plot_histogram_comparison_in_same_plot(axs, metric, x_label, comp_1, comp_2, comp_3, x_axis, x_bins,
+def plot_histogram_comparison_in_same_plot(axs, metric, x_label, comp_1, comp_2, comp_3, comp_4, x_axis, x_bins,
                                          multiplier=1, format='%f'):
     """
     A helper function to plot histograms for the given metric on the provided axes.
@@ -281,15 +284,17 @@ def plot_histogram_comparison_in_same_plot(axs, metric, x_label, comp_1, comp_2,
     values_hist_ddpg, ddpg_min, ddpg_max = plot_histogram_with_percentages_same(np.array(values_ddpg) * multiplier, comp_2['tag'], "red", ax=axs, format=format)
     _, values_ppo = extract_tensor_data(comp_3['log_dir'], metric)
     values_hist_ppo, ppo_min, ppo_max = plot_histogram_with_percentages_same(np.array(values_ppo) * multiplier, comp_3['tag'], "black", ax=axs, format=format)
+    _, values_td3 = extract_tensor_data(comp_4['log_dir'], metric)
+    values_hist_td3, td3_min, td3_max = plot_histogram_with_percentages_same(np.array(values_td3) * multiplier, comp_4['tag'], "green", ax=axs, format=format)
 
-    max_y = max(np.max(values_hist_sac), np.max(values_hist_ddpg),  np.max(values_hist_ppo))
+    max_y = max(np.max(values_hist_sac), np.max(values_hist_ddpg),  np.max(values_hist_ppo), np.max(values_hist_td3))
 
     fontsize = 16
 
     # Adjust the y-axis limits dynamically
     if x_axis is None:
-        min_x = min(np.min(sac_min), np.min(ddpg_min), np.min(ppo_min))
-        max_x = max(np.max(sac_max), np.max(ddpg_max), np.max(ppo_max))
+        min_x = min(np.min(sac_min), np.min(ddpg_min), np.min(ppo_min), np.min(td3_min))
+        max_x = max(np.max(sac_max), np.max(ddpg_max), np.max(ppo_max), np.max(td3_max))
         x_axis = [min_x * 0.9, max_x * 1.1]  # Add a small buffer
     else:
         min_x = x_axis[0]
@@ -335,8 +340,8 @@ def plot_histograms_comparison_separated(comp_1, comp_2, comp_3):
     plt.show()
     # plt.savefig('speed_comparison.png')  # Uncomment to save the plot
 
-def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, comp_3=None, x_axis=None,
-                                     x_bins=10, x_around_0=False, multiplier=1):
+def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, comp_3=None, comp_4=None, x_axis=None,
+                                     x_bins=100, x_around_0=False, multiplier=1):
     """
     Plot histograms for precomputed list-based metrics like 'speeds'.
     comp_2 and comp_3 are optional.
@@ -346,23 +351,45 @@ def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, 
     min_vals = []
     max_vals = []
     max_y_vals = []
+    all_values = []
+
+    comps = [c for c in [comp_1, comp_2, comp_3, comp_4] if c is not None]
+    for comp in comps:
+        all_values.extend(np.array(comp['metrics']) * multiplier)
+
+    if not all_values:
+        return  # No data to plot
+
+    # Determine global range for bins
+    global_min = min(all_values)
+    global_max = max(all_values)
+
+    if x_axis:
+        bin_range = (x_axis[0], x_axis[1])
+    else:
+        bin_range = (global_min, global_max)
+
+    _, bin_edges = np.histogram(all_values, bins=x_bins, range=bin_range)
+
 
     # Helper to extract and plot one histogram
-    def process_comp(comp, color):
+    def process_comp(comp, color, bins):
         values = np.array(comp['metrics']) * multiplier
         values = values.reshape(-1, 1)  # Nx1 array
-        values_hist, min_val, max_val = plot_histogram_with_percentages_same([values], comp['tag'], color, ax=axs)
+        values_hist, min_val, max_val = plot_histogram_with_percentages_same([values], comp['tag'], color, ax=axs, bins=bins)
         histograms.append(values_hist)
         min_vals.append(min_val)
         max_vals.append(max_val)
         max_y_vals.append(np.max(values_hist))
 
     # Always process comp_1
-    process_comp(comp_1, "blue")
+    process_comp(comp_1, "blue", bins=bin_edges)
     if comp_2 is not None:
-        process_comp(comp_2, "red")
+        process_comp(comp_2, "orange", bins=bin_edges)
     if comp_3 is not None:
-        process_comp(comp_3, "black")
+        process_comp(comp_3, "green", bins=bin_edges)
+    if comp_4 is not None:
+        process_comp(comp_4, "red", bins=bin_edges)
 
     # Axis settings
     if x_axis is None:
@@ -393,11 +420,11 @@ def plot_histogram_from_metric_lists(axs, metric, x_label, comp_1, comp_2=None, 
     axs.set_xlabel(x_label, fontsize=fontsize)
 
 
-def plot_histograms_comparison_same(comp_1, comp_2, comp_3):
+def plot_histograms_comparison_same(comp_1, comp_2, comp_3, comp_4):
     # Create a figure for distances with 3 subplots (one for each log_dir)
     fig, axs = plt.subplots(1, 1, figsize=(15, 12))
     # plot_histogram_comparison_in_same_plot(axs, 'distances', 'distances in pixels (total 512 pixels))', comp_1, comp_2, comp_3, x_axis=[-50, 50], multiplier=256, x_bins=10, format='%.3f')
-    plot_histogram_comparison_in_same_plot(axs, 'distances', 'distances in cm', comp_1, comp_2, comp_3, x_bins=10, format='%.3f')
+    plot_histogram_comparison_in_same_plot(axs, 'distances', 'distances in cm', comp_1, comp_2, comp_3, comp_4, x_bins=10, format='%.3f')
     plt.tight_layout()
     plt.subplots_adjust(top=0.85)  # Adjust title to fit
     plt.show()
@@ -405,7 +432,7 @@ def plot_histograms_comparison_same(comp_1, comp_2, comp_3):
 
     # Create a figure for speed with 3 subplots (one for each log_dir)
     fig, axs = plt.subplots(1, 1, figsize=(15, 12))
-    plot_histogram_comparison_in_same_plot(axs, 'speed', 'speed (km/h)', comp_1, comp_2, comp_3, x_axis=[32, 80], x_bins=10, multiplier=3.6, format='%d')
+    plot_histogram_comparison_in_same_plot(axs, 'speed', 'speed (km/h)', comp_1, comp_2, comp_3, comp_4, x_axis=[32, 80], x_bins=10, multiplier=3.6, format='%d')
     plt.tight_layout()
     plt.subplots_adjust(top=0.85)  # Adjust title to fit
     plt.show()
@@ -421,21 +448,21 @@ import time
 import os
 from datetime import datetime
 
-def save_histograms_comparison_same(comp_1, comp_2, comp_3):
+def save_histograms_comparison_same(comp_1, comp_2, comp_3, comp_4):
     experiment_starting_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     output_dir = f'tensorboard_comparisons_{experiment_starting_time}'
     os.makedirs(output_dir, exist_ok=True)
 
     # Create a figure for distances with 3 subplots (one for each log_dir)
     fig, axs = plt.subplots(1, 1, figsize=(15, 12))
-    plot_histogram_comparison_in_same_plot(axs, 'distances', 'distances in pixels (total 512 pixels))', comp_1, comp_2, comp_3, x_axis=[-50, 50], multiplier=256, x_bins=10, format='%.3f')
+    plot_histogram_comparison_in_same_plot(axs, 'distances', 'distances in pixels (total 512 pixels))', comp_1, comp_2, comp_3, comp_4, x_axis=[-50, 50], multiplier=256, x_bins=10, format='%.3f')
     plt.tight_layout()
     plt.subplots_adjust(top=0.85)  # Adjust title to fit
     plt.savefig(f"tensorboard_comparisons_{experiment_starting_time}/distances_comparison.png")  # Uncomment to save the plot
 
     # Create a figure for speed with 3 subplots (one for each log_dir)
     fig, axs = plt.subplots(1, 1, figsize=(15, 12))
-    plot_histogram_comparison_in_same_plot(axs, 'speed', 'speed (km/h)', comp_1, comp_2, comp_3, x_axis=[32, 80], x_bins=10, multiplier=3.6, format='%d')
+    plot_histogram_comparison_in_same_plot(axs, 'speed', 'speed (km/h)', comp_1, comp_2, comp_3, comp_4, x_axis=[32, 80], x_bins=10, multiplier=3.6, format='%d')
     plt.tight_layout()
     plt.subplots_adjust(top=0.85)  # Adjust title to fit
     plt.savefig(f"tensorboard_comparisons_{experiment_starting_time}/speed_comparison.png")  # Uncomment to save the plot

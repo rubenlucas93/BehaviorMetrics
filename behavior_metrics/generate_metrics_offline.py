@@ -9,8 +9,6 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from pilot_carla import PilotCarla
-from utils import environment
 from utils import metrics_carla
 from scripts import plot_tensorboard_perc_histogram
 from utils.colors import Colors
@@ -332,7 +330,7 @@ if __name__ == '__main__':
     app_configuration = SimpleNamespace(**{"task": "none"})
 
     generate_agregated_experiments_metrics(experiments_starting_time, experiments_elapsed_times, app_configuration, path)
-    # comparisons = metrics_carla.get_tensorboard_comparisons(experiments_starting_time)
-    # plot_tensorboard_perc_histogram.save_histograms_comparison_same(comparisons[0], comparisons[1], comparisons[2])
+    comparisons = metrics_carla.get_tensorboard_comparisons(experiments_starting_time)
+    # plot_tensorboard_perc_histogram.save_histograms_comparison_same(comparisons[0], comparisons[1], comparisons[2], comparisons[3])
 
     sys.exit(0)

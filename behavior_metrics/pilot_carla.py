@@ -51,7 +51,7 @@ class PilotCarla(threading.Thread):
         brains {brains.brains_handler.Brains} -- Brains controller instance
     """
 
-    def __init__(self, configuration, controller, brain_path, experiment_model=None):
+    def __init__(self, configuration, controller, brain_path, experiment_model=None, brain_kwargs=None):
         """Constructor of the pilot class
 
         Arguments:
@@ -72,6 +72,7 @@ class PilotCarla(threading.Thread):
         self.actuators = None
         self.brains = None
         self.experiment_model = experiment_model
+        self.brain_kwargs = brain_kwargs
         self.initialize_robot()
         self.pose3d = self.sensors.get_pose3d('pose3d_0')
         self.start_pose = np.array([self.pose3d.getPose3d().x, self.pose3d.getPose3d().y])
@@ -105,12 +106,13 @@ class PilotCarla(threading.Thread):
         self.actuators = Actuators(self.configuration.actuators)
         self.sensors = Sensors(self.configuration.sensors)
         # self.controller.camera.listen(self.controller.process_camera_image)
+        brain_kwargs = self.brain_kwargs or self.configuration.brain_kwargs
         if self.experiment_model:
             self.brains = Brains(self.sensors, self.actuators, self.brain_path, self.controller,
-                                 self.experiment_model, self.configuration.brain_kwargs)
+                                 self.experiment_model, brain_kwargs)
         else:
             self.brains = Brains(self.sensors, self.actuators, self.brain_path, self.controller,
-                                 config=self.configuration.brain_kwargs)
+                                 config=brain_kwargs)
         self.__wait_carla()
 
     def stop_interfaces(self):

@@ -398,13 +398,12 @@ class Brain:
         #self.tensorboard.update_actions(action, self.step)
 
         # To calculate distance to center on inference we use the 5 lowest points to reduce curve noise
-        # dists = np.mean(state[:6)  # Take 7 elements, apply abs, then mean
+        dists = np.mean(state[:2])  # Take 7 elements, apply abs, then mean
         # dists = np.mean(state)
         # print(dists)
         # print(state[:10])
-        # state = { "speed" : speed, "distances": center_distance, "curvatures": mean_curvature}
-        #
-        # self.tensorboard.update_state(state, self.step)
+        state = { "speed" : speed, "distances": center_distance, "curvatures": mean_curvature}
+        self.tensorboard.update_state(state, self.step)
 
         self.avg_speed = self.avg_speed + (self.speed - self.avg_speed) / self.step
 

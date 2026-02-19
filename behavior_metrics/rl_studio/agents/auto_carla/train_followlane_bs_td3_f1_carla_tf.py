@@ -47,14 +47,6 @@ def update_scatter_plot(ax, x, y, z, xlabel, ylabel, zlabel):
     plt.pause(0.001)
 
 
-def collect_usage():
-    cpu_usage = psutil.cpu_percent(interval=None)  # Get CPU usage percentage
-    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-    gpu_info = pynvml.nvmlDeviceGetUtilizationRates(handle)
-    gpu_usage = gpu_info.gpu
-    return cpu_usage, gpu_usage
-
-
 def combine_attributes(obj1, obj2, obj3):
     combined_dict = {}
 

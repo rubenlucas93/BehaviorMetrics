@@ -146,6 +146,14 @@ DISTANCE_PER_MAP = {
         'clockwise' : 3500,
         'anticlockwise': 3500
     },
+    'Carla/Maps/Town01': {
+        'clockwise': 3500,
+        'anticlockwise': 3500
+    },
+    'Carla/Maps/Town03': {
+        'clockwise': 3500,
+        'anticlockwise': 3500
+    },
     'Carla/Maps/Town04': {
         'clockwise': 3700,
         'anticlockwise': 3700
@@ -298,13 +306,13 @@ class ControllerCarla:
                     'b': color.b,
                 }
             })
-            self.world.debug.draw_point(
-                wp.transform.location + carla.Location(z=0.5),
-                size=0.05,
-                color=color,
-                life_time=0.0,
-                persistent_lines=True
-            )
+            # self.world.debug.draw_point(
+            #     wp.transform.location + carla.Location(z=0.5),
+            #     size=0.05,
+            #     color=color,
+            #     life_time=0.0,
+            #     persistent_lines=True
+            # )
 
     def lap_completed(self, distance):
         return distance >= self.lap_distance or self.stopped(distance)

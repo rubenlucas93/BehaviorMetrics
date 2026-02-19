@@ -33,9 +33,11 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/vehicle_control_cmd'
                     MaxV: 3
                     MaxW: 0.5
-        BrainPath: 'brains/CARLA/brain_carla_sb_sac.py'
+        BrainPath: 'brains/CARLA/followlane/brain_carla_sb_sac.py'
         PilotTimeCycle: 50 # Turn up to reduce number of control decisions
         AsyncMode: True # Set to False to control simulator time
+        brain_kwargs:
+            filename: 'brains/CARLA/followlane/config/config_inference_followlane_sb_sac_f1_carla.yaml'
         Parameters:
             Model: ''
             ImageCropped: True
@@ -47,15 +49,14 @@ Behaviors:
             ImageTranform: ''
         Type: 'CARLA'
     Simulation:
-        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_01_anticlockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_05_anticlockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
-#        World: configs/CARLA/CARLA_launch_files/town_10_anticlockwise_ruben.launch
-#        World: configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch
 #        World: configs/CARLA/CARLA_launch_files/town_04_ruben.launch
-#        World: configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch
+        World: configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch
+#        World: configs/CARLA/CARLA_launch_files/town_10_anticlockwise_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch
+       # World: configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch
+#        World: configs/CARLA/CARLA_launch_files/town_05_clockwise.launch
+#        World: configs/CARLA/CARLA_launch_files/town_02_clockwise.launch
+#        World: configs/CARLA/CARLA_launch_files/town_01_clockwise.launch
         RandomSpawnPoint: False
     Dataset:
         In: '/tmp/my_bag.bag'

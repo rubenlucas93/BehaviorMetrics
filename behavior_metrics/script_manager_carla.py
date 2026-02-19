@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 import rospy
+from shapely.lib import length
 
 from pilot_carla import PilotCarla
 from utils import environment
@@ -127,6 +128,14 @@ def main():
     brain = app_configuration.brain_path[brain_counter]
     experiment_model = app_configuration.experiment_model[brain_counter]
 
+    config_files = app_configuration.brain_kwargs['Config']
+    num_of_models = len(experiment_model)
+    if config_files and len(config_files) == num_of_models:
+        brain_kwargs = app_configuration.brain_kwargs['Config'][brain_counter]
+    else:
+        print("Not loading models from config since they are not properly informed")
+        brain_kwargs = None
+
     if app_configuration.spawn_points:
        # spawn_point = app_configuration.spawn_points[world_counter][repetition_counter]
         environment.launch_env(world, random_spawn_point=app_configuration.experiment_random_spawn_point, carla_simulator=True, config_spawn_point=app_configuration.spawn_points[world_counter][repetition_counter])
@@ -135,7 +144,7 @@ def main():
     controller = ControllerCarla(port=client_port)
 
     # Launch control
-    pilot = PilotCarla(app_configuration, controller, brain, experiment_model=experiment_model)
+    pilot = PilotCarla(app_configuration, controller, brain, experiment_model=experiment_model, brain_kwargs=brain_kwargs)
     pilot.daemon = True
     pilot.start()
     logger.info('Executing app')

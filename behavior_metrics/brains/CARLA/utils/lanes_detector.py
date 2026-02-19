@@ -371,6 +371,7 @@ class LaneDetector():
         lane_right_np = np.array([-waypoint_forward_np[1], waypoint_forward_np[0]])  # 90-degree rotation
         lane_offset = np.dot(waypoint_to_vehicle_np, lane_right_np)
         lane_offset /= np.linalg.norm(lane_right_np)
+        # Define your tolerance in meters
 
         # 3. Lane Alignment (Forward/Backward)/home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20250506-082233/best_model.zip
         lane_alignment = np.dot(vehicle_forward_np, waypoint_forward_np)
@@ -869,9 +870,6 @@ class LaneDetector():
             ])
 
             if np.sum(mask) < 2:
-                # if self.last_valid_centers is not None:
-                #     interpolated_center = self.last_valid_centers
-                # else:
                 interpolated_center = np.full((n_points, 2), self.NON_DETECTED)
             else:
                 # Apply the same mask to both 2D and 3D data
@@ -886,8 +884,12 @@ class LaneDetector():
                     first_true_index = len(mask)
                 self.lane_points["center"] = self.lane_points["center"][first_true_index:]
 
-                interpolated_center = interpolate_lane_points(visible_center, n_points)
-                self.last_valid_centers = interpolated_center
+                interpolated_center = interpolate_lane_points(visible_center, n_points, start_y=h)
+
+            if len(self.lane_points["center"]) < 30:
+                self.lane_points = None
+
+        # If interpolation failed, return dummy points
         return ll_segment, misalignment, center_distance, interpolated_center
 
     def add_text_to_image(self, image):
