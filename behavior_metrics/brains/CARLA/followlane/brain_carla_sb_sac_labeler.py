@@ -33,6 +33,10 @@ class InferenceExecutorValidator(BaseModel):
     settings: dict
     inference: dict
 
+
+PERTURBATION = 0.25
+
+
 class Brain:
 
     def __init__(self, sensors, actuators, handler, config=None):
@@ -237,9 +241,11 @@ class Brain:
             brake = -float(action[0])
             throttle = 0
 
+        steer = float(action[1]) +  random.uniform(-PERTURBATION, PERTURBATION)
+
         self.car.apply_control(carla.VehicleControl(throttle=throttle,
                                                     brake=brake,
-                                                    steer=float(action[1])))
+                                                    steer=steer))
 
         image = self.camera.getImage().data
         image_1 = self.camera_1.getImage().data

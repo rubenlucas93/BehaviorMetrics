@@ -36,8 +36,8 @@ inference:
   sac:
 #    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1025_gamma99/best_model.zip
  #   inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1023_gamma99/best_model.zip
-#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1120/best_model.zi
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20260219-195355/model_20000_steps_20260219-205415.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1120/best_model.zip
+#    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1023_gamma99/best_model.zip
 
 algorithm:
   sac:
@@ -113,8 +113,7 @@ carla_environments:
     rolename: "hero" #name
     gamma: 2.2 #for camera
     sync: false #syncronous mode or async
-#    detection_mode: carla_perfect # OJO!! De la misma manera que otros parametros. Esto no hace nada en BM
-    detection_mode: detection_mode
+    detection_mode: carla_perfect # OJO!! De la misma manera que otros parametros. Esto no hace nada en BM
     fixed_delta_seconds: 0.1
     async_forced_delta_seconds: 0
     reset_threshold: 0.3

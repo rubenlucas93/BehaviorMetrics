@@ -32,9 +32,8 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/steering_angle'
         BrainPath: [
 #            'brains/CARLA/followlane/brain_carla_sb_sac.py',
-#            'brains/CARLA/followlane/brain_carla_sb_sac_2.py',
-#            'brains/CARLA/followlane/brain_carla_sb_sac_3.py', #just entropy gamma99
-             'brains/CARLA/followlane/brain_carla_sb_sac_labeler.py',
+            'brains/CARLA/followlane_yolop/brain_carla_sb_sac.py',
+#             'brains/CARLA/followlane/brain_carla_sb_sac_labeler.py',
  #           'brains/CARLA/followlane/brain_carla_sb_td3_2.py', # gamma99
 #            'brains/CARLA/followlane/brain_carla_sb_td3_3.py', # gamma99
 #            'brains/CARLA/followlane/brain_carla_sb_td3_4.py', # gamma99
@@ -99,10 +98,10 @@ Behaviors:
         Name: "Experiment name"
         Description: "Experiment description"
         UseWorldTimeouts: False
-        Timeout: [ 1 ] # time to poll if experiment is done (1 for each world)
-        MaxWaits: [ 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
-#        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
- #       MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+#        Timeout: [ 1 ] # time to poll if experiment is done (1 for each world)
+#        MaxWaits: [ 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
+        Timeout: [ 1, 1 ] # time to poll if experiment is done (1 for each world)
+        MaxWaits: [ 450, 450 ] # maximum number of times the experiment status will be checked (MaxWaits * Timeout = max total time)
   #      Timeout: [1, 1, 1, 1, 1, 1] # time to poll if experiment is done (1 for each world)
   #      MaxWaits: [450, 450, 450, 450, 450, 450] # maximum stop
 #        Timeout: [1, 1, 1, 1] # time to poll if experiment is done (1 for each world)
@@ -113,6 +112,8 @@ Behaviors:
         World: [
       #       configs/CARLA/CARLA_launch_files/town_01_clockwise.launch,
       #       configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
+             configs/CARLA/CARLA_launch_files/town_04_ruben_clockwise.launch,
              configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
       #       configs/CARLA/CARLA_launch_files/town_02_clockwise.launch,
       #       configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,

@@ -155,8 +155,8 @@ DISTANCE_PER_MAP = {
         'anticlockwise': 3500
     },
     'Carla/Maps/Town04': {
-        'clockwise': 3700,
-        'anticlockwise': 3700
+        'clockwise': 4000,
+        'anticlockwise': 4000
     },
     'Carla/Maps/Town05': {
         'clockwise': 2500,
