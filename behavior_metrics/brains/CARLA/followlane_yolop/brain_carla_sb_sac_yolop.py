@@ -20,7 +20,9 @@ from albumentations import (
 )
 
 from brains.CARLA.utils.lanes_detector_yolopv2 import LaneDetector as LaneDetectorYolop
-from brains.CARLA.utils.lanes_detector import LaneDetector as LaneDetector
+# from brains.CARLA.utils.lanes_detector import LaneDetector as LaneDetector
+from brains.CARLA.utils.lane_detector_paper_1_backup import LaneDetector
+
 from utils.constants import DATASETS_DIR, ROOT_PATH
 
 from brains.CARLA.utils.modified_tensorboard import ModifiedTensorBoard
@@ -107,8 +109,9 @@ class Brain:
         if config and 'filename' in config:
             filename = config['filename']
         else:
-            filename = 'brains/CARLA/followlane/config/config_inference_followlane_sb_sac_f1_carla.yaml'
+            filename = 'brains/CARLA/followlane_yolop/config/config_inference_followlane_sb_sac_f1_carla.yaml'
 
+        print(filename)
         args = {
             'algorithm': 'sac',
             'environment': 'simple',
@@ -134,11 +137,7 @@ class Brain:
         self.fov = 90
         self.n_points = 10
 
-        self.lane_detector_yolop = LaneDetectorYolop(self.car,
-                                          self.x_row,
-                                          camera_transform,
-                                          self.fov,
-                                          self.n_points)
+        self.lane_detector_yolop = LaneDetectorYolop(self.n_points)
         self.lane_detector = LaneDetector(self.car,
                                           self.map,
                                           self.world,
@@ -260,10 +259,9 @@ class Brain:
 
         sensor_time = time.time()
         self.tensorboard.update_times(sensor_time - self.previous_time, "sensor")
-        print("detecting!")
 
-        centers, image_processed, center_distance, raw_image, paths_image = self.lane_detector_yolop.process_image(image)
-        # centers_l, image_processed, center_distance_l, _ = self.lane_detector.process_image(image)
+        centers, image_processed, center_distance, raw_image, paths_image = self.lane_detector_yolop.process_image(image_2,)
+        # centers_l, image_processed_l, center_distance_l, _ = self.lane_detector.process_image(image)
 
 
         # perception_time = time.time()
@@ -279,7 +277,7 @@ class Brain:
         speed = (v.x ** 2 + v.y ** 2 + v.z ** 2) ** 0.5
         w_angle = self.car.get_control().steer
 
-        state, x_centers_normalized, y_normalized = self.lane_detector.normalize_centers(centers)
+        states, x_centers_normalized, y_normalized = self.lane_detector.normalize_centers(centers)
         half_image = len(x_centers_normalized)//2
         close_points_dev = abs(x_centers_normalized[0] - x_centers_normalized[half_image])
         x_normalized = np.array(x_centers_normalized)
@@ -290,21 +288,36 @@ class Brain:
         self.v_goal_buffer.append(v_goal_now)
         v_goal = sum(self.v_goal_buffer) / len(self.v_goal_buffer)
 
-        state.append(speed / 25)
-        state.append(w_angle)
+        # print("points")
+        # print(states)
+
+        # print("speed")
+        # print(speed)
+        #
+        # print("v_goal")
+        # print(v_goal)
+
+        # states = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5015625, 0.5015625, 0.5015625, 0.5015625, 0.486328125, 0.509765625, 0.53515625, 0.560546875, 0.5859375, 0.609375, 0.634765625, 0.66015625, 0.685546875, 0.7109375]
+        # v_goal = 19.68927906822399
+        # action = [0, 0]
+        # speed = 0
+        # w_angle = 0
+
+        states.append(speed / 25)
+        states.append(v_goal / 25)
         # state.append(final_curvature)
         # state.append(misalignment)
-        state.append(action[0])
-        state.append(action[1])
+        states.append(w_angle)
+        states.append(action[0])
+        states.append(action[1])
         # state.append(close_points_dev)
         # state.append(deviated_points)
-        state.append(v_goal / 25)
 
         # print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')} [followlane_yolop] State: {state}")
 
-        self.previous_states = state
+        self.previous_states = states
 
-        self.tensorboard.update_actions(action, self.step)
+        # self.tensorboard.update_actions(action, self.step)
 
         # To calculate distance to center on inference we use the 5 lowest points to reduce curve noise
         # dists = np.mean(state[:2])  # Take 7 elements, apply abs, then mean
@@ -328,7 +341,6 @@ class Brain:
         self.update_frame('frame_2', image_processed)
         # self.update_pose(self.pose.getPose3d())
         #print(self.pose.getPose3d())
-        print("iteration!")
         # display_time = time.time()
         # self.tensorboard.update_times(display_time - action_time, "display")
         return False

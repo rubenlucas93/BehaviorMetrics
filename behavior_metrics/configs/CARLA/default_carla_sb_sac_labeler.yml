@@ -10,7 +10,7 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/rgb_view/image'
                 Camera_2:
                     Name: 'camera_2'
-                    Topic: '/carla/ego_vehicle/semantic_segmentation_front/image'
+                    Topic: '/carla/ego_vehicle/rgb_new/image'
                 Camera_3:
                     Name: 'camera_3'
                     Topic: '/carla/ego_vehicle/dvs_front/image'

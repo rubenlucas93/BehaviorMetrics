@@ -10,7 +10,7 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/rgb_view/image'
                 Camera_2:
                     Name: 'camera_2'
-                    Topic: '/carla/ego_vehicle/semantic_segmentation_front/image'
+                    Topic: '/carla/ego_vehicle/rgb_new/image'
                 Camera_3:
                     Name: 'camera_3'
                     Topic: '/carla/ego_vehicle/dvs_front/image'
@@ -33,7 +33,7 @@ Behaviors:
                     Topic: '/carla/ego_vehicle/vehicle_control_cmd'
                     MaxV: 3
                     MaxW: 0.5
-        BrainPath: 'brains/CARLA/followlane_yolop/brain_carla_sb_sac.py'
+        BrainPath: 'brains/CARLA/followlane_yolop/brain_carla_sb_sac_yolop.py'
         PilotTimeCycle: 50 # Turn up to reduce number of control decisions
         AsyncMode: True # Set to False to control simulator time
         brain_kwargs:
@@ -41,7 +41,7 @@ Behaviors:
         Parameters:
             Model: ''
             ImageCropped: True
-            ImageSize: [ 200,66 ]
+            ImageSize: [ 100,50 ]
             ImageNormalized: True
             PredictionsNormalized: True
             GPU: True

@@ -31,9 +31,9 @@ Behaviors:
                     Name: 'wheel'
                     Topic: '/carla/ego_vehicle/steering_angle'
         BrainPath: [
-#            'brains/CARLA/followlane/brain_carla_sb_sac.py',
-            'brains/CARLA/followlane_yolop/brain_carla_sb_sac.py',
-#             'brains/CARLA/followlane/brain_carla_sb_sac_labeler.py',
+#            'brains/CARLA/followlane/brain_carla_sb_sac_yolop.py',
+#            'brains/CARLA/followlane_yolop/brain_carla_sb_sac_yolop.py',
+             'brains/CARLA/followlane/brain_carla_sb_sac_labeler.py',
  #           'brains/CARLA/followlane/brain_carla_sb_td3_2.py', # gamma99
 #            'brains/CARLA/followlane/brain_carla_sb_td3_3.py', # gamma99
 #            'brains/CARLA/followlane/brain_carla_sb_td3_4.py', # gamma99
@@ -110,12 +110,12 @@ Behaviors:
         clientPort: 2000
     Simulation:
         World: [
-      #       configs/CARLA/CARLA_launch_files/town_01_clockwise.launch,
-      #       configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch,
+             configs/CARLA/CARLA_launch_files/town_01_clockwise.launch,
+             configs/CARLA/CARLA_launch_files/town_03_clockwise_ruben.launch,
 #             configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
-             configs/CARLA/CARLA_launch_files/town_04_ruben_clockwise.launch,
-             configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
-      #       configs/CARLA/CARLA_launch_files/town_02_clockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_04_ruben_clockwise.launch,
+#             configs/CARLA/CARLA_launch_files/town_04_ruben.launch,
+#             configs/CARLA/CARLA_launch_files/town_02_clockwise.launch,
       #       configs/CARLA/CARLA_launch_files/town_06_clockwise_ruben.launch,
       #       configs/CARLA/CARLA_launch_files/town_10_clockwise_ruben.launch,
             ]

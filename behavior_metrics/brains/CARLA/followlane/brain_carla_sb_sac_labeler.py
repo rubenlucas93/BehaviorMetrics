@@ -34,7 +34,7 @@ class InferenceExecutorValidator(BaseModel):
     inference: dict
 
 
-PERTURBATION = 0.25
+PERTURBATION = 0.13
 
 
 class Brain:

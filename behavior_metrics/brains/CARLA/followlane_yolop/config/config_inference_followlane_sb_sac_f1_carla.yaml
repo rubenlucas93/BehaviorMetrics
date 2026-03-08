@@ -36,7 +36,7 @@ inference:
   sac:
 #    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1025_gamma99/best_model.zip
  #   inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1023_gamma99/best_model.zip
-    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/best_checkpoints/10points/optimal/sac_bs/seed1/just_entropy/1120/best_model.zip
+    inference_tf_model_name: /home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/checkpoints/follow_lane_carla_sac_auto_carla_baselines/20260225-003252/model_1340000_steps_20260226-085044.zip
 
 algorithm:
   sac:
