@@ -72,7 +72,7 @@ class CameraWidget(QWidget):
         image = self.parent.controller.get_data(self.id)
         if image is not None:
             with self.lock_update:
-                im = QImage(image.data, image.shape[1], image.shape[0], QImage.Format_RGB888)
+                im = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
                 pixmap = QPixmap.fromImage(im)
                 scale_width = self.parent_width
                 scale_height = self.parent_height

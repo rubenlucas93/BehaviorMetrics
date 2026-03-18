@@ -394,7 +394,7 @@ class LaneDetector:
         return torch.device('cuda:0' if cuda else 'cpu')
 
     def _load_model(self):
-        model_path = "/home/ruben/Desktop/2020-phd-ruben-lucas/src/RL-Studio/rl_studio/envs/carla/utils/yolop/weights/yolopv2.pt"
+        model_path = "/home/ruben/Desktop/unibotics/src/RL-Studio/rl_studio/envs/carla/utils/yolop/weights/yolopv2.pt"
         model = torch.jit.load(model_path, map_location=self.device).float()
         model.to(self.device)
         model.eval()

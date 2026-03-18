@@ -41,3 +41,4 @@ pandas
 scikit-learn==1.0.2
 pygame
 keras_preprocessing
+opencv-python
